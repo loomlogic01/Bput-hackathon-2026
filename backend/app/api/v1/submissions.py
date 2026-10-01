@@ -8,7 +8,17 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_current_user
+from backend.app.api.deps import (
+    PERM_APPROVE,
+    PERM_CREATE,
+    PERM_READ,
+    PERM_REVIEW,
+    PERM_SUBMIT,
+    PERM_UPDATE,
+    accessible_project_ids,
+    ensure_project_access,
+    require_permissions,
+)
 from backend.app.api.v1.schemas import (
     RequestCorrectionRequest,
     SubmissionCreateRequest,
@@ -61,6 +71,21 @@ WORKFLOW_TRANSITIONS: dict[
 }
 
 
+def load_scoped_submission(
+    submission_id: uuid.UUID, db: Session, current_user: User
+) -> Submission:
+    """Load a submission, enforcing that it exists and is in the caller's scope.
+
+    Raises 404 when the submission genuinely does not exist, and 403 when it
+    exists but belongs to a project outside the caller's scope.
+    """
+    submission = db.query(Submission).filter_by(id=submission_id).first()
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    ensure_project_access(db, current_user, submission.project_id)
+    return submission
+
+
 def _apply_transition(
     submission_id: uuid.UUID,
     action: str,
@@ -68,16 +93,14 @@ def _apply_transition(
     db: Session,
     current_user: User,
 ) -> ApprovalWorkflow:
-    """Validate the current status, move the submission, and audit the change.
+    """Validate scope and status, move the submission, and audit the change.
 
-    Raises HTTP 404 if the submission does not exist and HTTP 400 if the
-    submission is not in one of the statuses allowed for this action.
+    Raises HTTP 404 if the submission does not exist, 403 if it is outside the
+    caller's scope, and 400 if its status does not allow this action.
     """
     allowed_from, to_status = WORKFLOW_TRANSITIONS[action]
 
-    submission = db.query(Submission).filter_by(id=submission_id).first()
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
+    submission = load_scoped_submission(submission_id, db, current_user)
 
     if submission.status not in allowed_from:
         expected = " or ".join(s.value for s in allowed_from)
@@ -109,9 +132,9 @@ def _apply_transition(
 def create_submission(
     payload: SubmissionCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_CREATE)),
 ):
-    """Create a new DRAFT submission."""
+    """Create a new DRAFT submission for a project in the caller's scope."""
     # Validate referenced entities exist
     if not db.query(Project).filter_by(id=payload.project_id).first():
         raise HTTPException(status_code=404, detail="Project not found")
@@ -119,6 +142,9 @@ def create_submission(
         raise HTTPException(status_code=404, detail="Reporting period not found")
     if not db.query(BRSRFramework).filter_by(id=payload.framework_id).first():
         raise HTTPException(status_code=404, detail="Framework not found")
+
+    # ...and that the caller is allowed to file against this project.
+    ensure_project_access(db, current_user, payload.project_id)
 
     submission = Submission(
         project_id=payload.project_id,
@@ -137,23 +163,25 @@ def create_submission(
 @router.get("/", response_model=List[SubmissionResponse])
 def list_submissions(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_READ)),
 ):
-    """Return submissions accessible to the authenticated user."""
-    return db.query(Submission).all()
+    """Return the submissions within the caller's organisational scope."""
+    project_ids = accessible_project_ids(db, current_user)
+    if project_ids is None:  # SUPER_ADMIN: unrestricted
+        return db.query(Submission).all()
+    if not project_ids:
+        return []
+    return db.query(Submission).filter(Submission.project_id.in_(project_ids)).all()
 
 
 @router.get("/{submission_id}", response_model=SubmissionResponse)
 def get_submission(
     submission_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_READ)),
 ):
-    """Return a single submission by ID."""
-    submission = db.query(Submission).filter_by(id=submission_id).first()
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
-    return submission
+    """Return a single submission by ID, if it is in the caller's scope."""
+    return load_scoped_submission(submission_id, db, current_user)
 
 
 @router.post(
@@ -165,12 +193,10 @@ def upsert_submission_value(
     submission_id: uuid.UUID,
     payload: SubmissionValueCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_UPDATE)),
 ):
     """Create or update an answer for a BRSR question within a submission."""
-    submission = db.query(Submission).filter_by(id=submission_id).first()
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
+    submission = load_scoped_submission(submission_id, db, current_user)
 
     if submission.status not in EDITABLE_STATUSES:
         raise HTTPException(
@@ -220,12 +246,10 @@ def upsert_submission_value(
 def list_submission_values(
     submission_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_READ)),
 ):
-    """Return all submitted answers for a submission."""
-    submission = db.query(Submission).filter_by(id=submission_id).first()
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
+    """Return all submitted answers for a submission in the caller's scope."""
+    load_scoped_submission(submission_id, db, current_user)
     return db.query(SubmissionValue).filter_by(submission_id=submission_id).all()
 
 
@@ -238,7 +262,7 @@ def submit_submission(
     submission_id: uuid.UUID,
     payload: WorkflowActionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_SUBMIT)),
 ):
     """DRAFT -> SUBMITTED. Hand the draft over for review."""
     return _apply_transition(submission_id, "submit", payload.comments, db, current_user)
@@ -249,7 +273,7 @@ def review_submission(
     submission_id: uuid.UUID,
     payload: WorkflowActionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_REVIEW)),
 ):
     """SUBMITTED -> UNDER_REVIEW. A reviewer picks the submission up."""
     return _apply_transition(submission_id, "review", payload.comments, db, current_user)
@@ -263,7 +287,7 @@ def request_correction(
     submission_id: uuid.UUID,
     payload: RequestCorrectionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_REVIEW)),
 ):
     """UNDER_REVIEW -> CORRECTION_REQUIRED. A reason is mandatory."""
     if not payload.comments.strip():
@@ -281,7 +305,7 @@ def resubmit_submission(
     submission_id: uuid.UUID,
     payload: WorkflowActionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_SUBMIT)),
 ):
     """CORRECTION_REQUIRED -> RESUBMITTED. Corrections have been applied."""
     return _apply_transition(submission_id, "resubmit", payload.comments, db, current_user)
@@ -292,7 +316,7 @@ def approve_submission(
     submission_id: uuid.UUID,
     payload: WorkflowActionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_APPROVE)),
 ):
     """UNDER_REVIEW or RESUBMITTED -> APPROVED."""
     return _apply_transition(submission_id, "approve", payload.comments, db, current_user)
@@ -303,7 +327,7 @@ def lock_submission(
     submission_id: uuid.UUID,
     payload: WorkflowActionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_APPROVE)),
 ):
     """APPROVED -> LOCKED. Finalise the submission so it can no longer be edited."""
     return _apply_transition(submission_id, "lock", payload.comments, db, current_user)
@@ -316,12 +340,10 @@ def lock_submission(
 def list_submission_workflow(
     submission_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permissions(PERM_READ)),
 ):
     """Return the full audit trail of status transitions, oldest first."""
-    submission = db.query(Submission).filter_by(id=submission_id).first()
-    if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
+    load_scoped_submission(submission_id, db, current_user)
     return (
         db.query(ApprovalWorkflow)
         .filter_by(submission_id=submission_id)
