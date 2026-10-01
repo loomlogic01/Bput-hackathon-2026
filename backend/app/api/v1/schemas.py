@@ -1,0 +1,170 @@
+"""
+Pydantic request/response schemas for the BRSR API endpoints.
+"""
+
+import uuid
+from datetime import date
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, ConfigDict
+
+
+# ── Projects ──
+
+class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    name: str
+    code: Optional[str] = None
+    location: Optional[str] = None
+    business_unit_id: uuid.UUID
+
+
+# ── Reporting Periods ──
+
+class ReportingPeriodResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    fiscal_year: str
+    start_date: date
+    end_date: date
+    boundary: str
+    description: Optional[str] = None
+    organization_id: uuid.UUID
+
+
+# ── BRSR Framework (nested hierarchy) ──
+
+class BRSRQuestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    code: str
+    question_text: str
+    guidance: Optional[str] = None
+    response_type: str
+    unit_of_measurement: Optional[str] = None
+    is_mandatory: bool
+    order_index: int
+
+
+class BRSRIndicatorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    code: str
+    title: str
+    indicator_type: str
+    order_index: int
+    section_id: uuid.UUID
+    principle_id: Optional[uuid.UUID] = None
+    questions: List[BRSRQuestionResponse] = []
+
+
+class BRSRPrincipleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    principle_number: int
+    code: str
+    title: str
+    description: Optional[str] = None
+    order_index: int
+    indicators: List[BRSRIndicatorResponse] = []
+
+
+class BRSRSectionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    code: str
+    title: str
+    description: Optional[str] = None
+    order_index: int
+    principles: List[BRSRPrincipleResponse] = []
+    indicators: List[BRSRIndicatorResponse] = []
+
+
+class BRSRFrameworkListResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    name: str
+    version: str
+    description: Optional[str] = None
+    is_active: bool
+
+
+class BRSRFrameworkDetailResponse(BRSRFrameworkListResponse):
+    sections: List[BRSRSectionResponse] = []
+
+
+# ── Submissions ──
+
+class SubmissionCreateRequest(BaseModel):
+    project_id: uuid.UUID
+    reporting_period_id: uuid.UUID
+    framework_id: uuid.UUID
+    comments: Optional[str] = None
+
+
+class SubmissionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    status: str
+    comments: Optional[str] = None
+    project_id: uuid.UUID
+    reporting_period_id: uuid.UUID
+    framework_id: uuid.UUID
+    created_by_id: Optional[uuid.UUID] = None
+    created_at: Any = None
+    updated_at: Any = None
+
+
+# ── Submission Values ──
+
+class SubmissionValueCreateRequest(BaseModel):
+    question_id: uuid.UUID
+    value_text: Optional[str] = None
+    value_numeric: Optional[float] = None
+    value_json: Optional[dict] = None
+    data_source: Optional[str] = None
+    calculation_method: Optional[str] = None
+    source_department: Optional[str] = None
+
+
+class SubmissionValueResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    submission_id: uuid.UUID
+    question_id: uuid.UUID
+    value_text: Optional[str] = None
+    value_numeric: Optional[float] = None
+    value_json: Optional[dict] = None
+    data_source: Optional[str] = None
+    calculation_method: Optional[str] = None
+    source_department: Optional[str] = None
+    created_at: Any = None
+    updated_at: Any = None
+
+
+# ── Submission Workflow ──
+
+class WorkflowActionRequest(BaseModel):
+    """Body for a workflow transition. The review comment is optional."""
+
+    comments: Optional[str] = None
+
+
+class RequestCorrectionRequest(BaseModel):
+    """Body for request-correction. A reason is mandatory."""
+
+    comments: str
+
+
+class SubmissionWorkflowResponse(BaseModel):
+    """An ApprovalWorkflow row recording one status transition."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    submission_id: uuid.UUID
+    from_status: str
+    to_status: str
+    action_by_id: Optional[uuid.UUID] = None
+    comments: Optional[str] = None
+    created_at: Any = None

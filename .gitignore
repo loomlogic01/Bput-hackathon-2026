@@ -1,0 +1,34 @@
+# ── Environment / secrets ──
+# .env holds real credentials (DB password, JWT signing key) and must never be
+# committed. .env.example is committed as the template.
+.env
+.env.*
+!.env.example
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+ENV/
+
+# ── Tooling / test artefacts ──
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ── Runtime artefacts ──
+uploads/
+*.log
+
+# ── Editors / OS ──
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
