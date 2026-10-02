@@ -1,0 +1,364 @@
+.dash {
+  min-height: 100%;
+  background: #f4f6f8;
+}
+
+/* ── Top bar ── */
+
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.75rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e6ea;
+}
+
+.dash-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.dash-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 6px;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dash-brand-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.dash-brand-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.dash-signout {
+  padding: 0.42rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.dash-signout:hover {
+  background: #f9fafb;
+}
+
+.dash-signout:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+/* ── Layout ── */
+
+.dash-body {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 3rem;
+}
+
+.dash-welcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.25rem 1.4rem;
+  margin-bottom: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+}
+
+.dash-welcome-title {
+  font-size: 1.2rem;
+  color: #111827;
+}
+
+.dash-welcome-sub {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.dash-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+}
+
+.dash-identity-item dt {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.dash-identity-item dd {
+  margin-top: 0.15rem;
+  font-size: 0.87rem;
+  color: #111827;
+  word-break: break-all;
+}
+
+.dash-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.86rem;
+}
+
+.dash-retry {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #fca5a5;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* ── Summary stats ── */
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.dash-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.95rem 1.1rem;
+  background: #ffffff;
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+}
+
+.dash-stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #0f766e;
+}
+
+.dash-stat-label {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+/* ── Panels ── */
+
+.dash-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.dash-panel {
+  padding: 1.1rem 1.25rem 1.25rem;
+  margin-bottom: 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+}
+
+.dash-columns .dash-panel {
+  margin-bottom: 0;
+}
+
+.dash-panel-head {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.dash-panel-title {
+  font-size: 0.98rem;
+  color: #111827;
+}
+
+.dash-panel-sub {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+.dash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.dash-row {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #eef1f3;
+  border-radius: 7px;
+}
+
+.dash-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.dash-row-title {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.dash-row-note {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.dash-chip {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dash-chip--plain {
+  background: #f3f4f6;
+  color: #4b5563;
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 500;
+}
+
+/* ── Submissions table ── */
+
+.dash-table-wrap {
+  overflow-x: auto;
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dash-table th {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #e2e6ea;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.dash-table td {
+  padding: 0.6rem;
+  border-bottom: 1px solid #f4f5f6;
+  color: #374151;
+}
+
+.dash-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dash-status {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dash-status--draft {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.dash-status--progress {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.dash-status--review {
+  background: #fefce8;
+  color: #a16207;
+}
+
+.dash-status--action {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.dash-status--done {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* ── States ── */
+
+.dash-muted {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.dash-empty {
+  padding: 1.1rem 0.75rem;
+  text-align: center;
+  font-size: 0.86rem;
+  color: #9ca3af;
+  background: #fafbfb;
+  border: 1px dashed #dfe3e6;
+  border-radius: 7px;
+}
+
+@media (max-width: 640px) {
+  .dash-topbar {
+    padding: 0.75rem 1rem;
+  }
+
+  .dash-body {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  .dash-welcome {
+    flex-direction: column;
+  }
+}

@@ -81,6 +81,57 @@ export function listFrameworks(token?: string): Promise<BrsrFramework[]> {
   return request<BrsrFramework[]>('/brsr/', { token })
 }
 
+// ── Project & reporting period endpoints ──
+
+export interface Project {
+  id: string
+  name: string
+  code: string | null
+  location: string | null
+  business_unit_id: string
+}
+
+export interface ReportingPeriod {
+  id: string
+  fiscal_year: string
+  start_date: string
+  end_date: string
+  boundary: string
+  description: string | null
+  organization_id: string
+}
+
+/** GET /projects/ - projects within the caller's scope. */
+export function listProjects(token?: string): Promise<Project[]> {
+  return request<Project[]>('/projects/', { token })
+}
+
+/** GET /projects/reporting-periods - periods within the caller's scope. */
+export function listReportingPeriods(
+  token?: string,
+): Promise<ReportingPeriod[]> {
+  return request<ReportingPeriod[]>('/projects/reporting-periods', { token })
+}
+
+// ── Submission endpoints ──
+
+export interface Submission {
+  id: string
+  status: string
+  comments: string | null
+  project_id: string
+  reporting_period_id: string
+  framework_id: string
+  created_by_id: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+/** GET /submissions/ - submissions within the caller's scope. */
+export function listSubmissions(token?: string): Promise<Submission[]> {
+  return request<Submission[]>('/submissions/', { token })
+}
+
 // ── Authentication endpoints ──
 // This module performs no token storage. The caller (AuthContext) owns the
 // token and passes it per request.
