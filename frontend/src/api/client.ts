@@ -15,11 +15,18 @@ export const API_BASE_URL: string =
 /** An HTTP error response from the backend. */
 export class ApiError extends Error {
   readonly status: number
+  /**
+   * FastAPI returns `detail` as a string for 401/403/404 and as an *array* of
+   * validation objects for 422. When it is an array it is surfaced here so a
+   * caller can explain what failed; `message` keeps the status-line fallback.
+   */
+  readonly details?: unknown[]
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, details?: unknown[]) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.details = details
   }
 }
 
@@ -51,15 +58,19 @@ export async function request<T>(
   if (!response.ok) {
     // FastAPI reports errors as { "detail": ... }; fall back to the status line.
     let detail = `${response.status} ${response.statusText}`
+    let details: unknown[] | undefined
     try {
       const payload = await response.json()
       if (payload && typeof payload.detail === 'string') {
         detail = payload.detail
+      } else if (payload && Array.isArray(payload.detail)) {
+        // 422 validation errors - keep the array for the caller to render.
+        details = payload.detail
       }
     } catch {
       // Non-JSON error body - keep the status line.
     }
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status, detail, details)
   }
 
   if (response.status === 204) return undefined as T
@@ -130,6 +141,32 @@ export interface Submission {
 /** GET /submissions/ - submissions within the caller's scope. */
 export function listSubmissions(token?: string): Promise<Submission[]> {
   return request<Submission[]>('/submissions/', { token })
+}
+
+/** Body accepted by POST /submissions/ (SubmissionCreateRequest). */
+export interface CreateSubmissionInput {
+  project_id: string
+  reporting_period_id: string
+  framework_id: string
+  /** Optional. These are the submission's own notes, not a workflow comment. */
+  comments?: string | null
+}
+
+/**
+ * POST /submissions/ - create a DRAFT submission.
+ *
+ * Requires the `submission:create` permission and the project to be in the
+ * caller's scope, otherwise the API answers 403.
+ */
+export function createSubmission(
+  token: string,
+  input: CreateSubmissionInput,
+): Promise<Submission> {
+  return request<Submission>('/submissions/', {
+    method: 'POST',
+    body: input,
+    token,
+  })
 }
 
 // ── Authentication endpoints ──

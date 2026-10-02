@@ -15,6 +15,7 @@ import {
   listSubmissions,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import NewSubmissionPage from './NewSubmissionPage'
 import './DashboardPage.css'
 
 interface DashboardData {
@@ -61,6 +62,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showNewSubmission, setShowNewSubmission] = useState(false)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -119,12 +121,29 @@ export default function DashboardPage() {
             <p className="dash-brand-name">ESG Reporting Portal</p>
           </div>
         </div>
-        <button className="dash-signout" type="button" onClick={logout}>
-          Sign out
-        </button>
+        <div className="dash-topbar-actions">
+          <button
+            className="dash-primary"
+            type="button"
+            onClick={() => setShowNewSubmission(true)}
+          >
+            New Submission
+          </button>
+          <button className="dash-signout" type="button" onClick={logout}>
+            Sign out
+          </button>
+        </div>
       </header>
 
-      <div className="dash-body">
+      {showNewSubmission ? (
+        <NewSubmissionPage
+          onCreated={() => {
+            void load()
+          }}
+          onCancel={() => setShowNewSubmission(false)}
+        />
+      ) : (
+        <div className="dash-body">
         <section className="dash-welcome">
           <div className="dash-welcome-main">
             <h2 className="dash-welcome-title">
@@ -275,7 +294,8 @@ export default function DashboardPage() {
             <Empty message="No submissions yet." />
           )}
         </Panel>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

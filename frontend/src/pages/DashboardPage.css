@@ -48,6 +48,35 @@
   color: #111827;
 }
 
+.dash-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.dash-primary {
+  padding: 0.42rem 0.85rem;
+  border: 1px solid #0f766e;
+  border-radius: 6px;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.dash-primary:hover {
+  background: #115e59;
+}
+
+.dash-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
 .dash-signout {
   padding: 0.42rem 0.85rem;
   border: 1px solid #d1d5db;
