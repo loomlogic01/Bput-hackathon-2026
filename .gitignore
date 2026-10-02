@@ -27,6 +27,14 @@ htmlcov/
 uploads/
 *.log
 
+# ── Frontend (Node) ──
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
 # ── Editors / OS ──
 .idea/
 .vscode/
