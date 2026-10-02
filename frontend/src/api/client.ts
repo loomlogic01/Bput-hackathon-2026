@@ -92,6 +92,103 @@ export function listFrameworks(token?: string): Promise<BrsrFramework[]> {
   return request<BrsrFramework[]>('/brsr/', { token })
 }
 
+// ── BRSR hierarchy (GET /brsr/{id}) ──
+
+/**
+ * The response types the backend enum defines. The API serialises
+ * `response_type` as a plain string, so an unrecognised value must still
+ * render rather than crash - the renderer falls back to a read-only box.
+ */
+export type BrsrResponseType =
+  | 'NUMBER'
+  | 'TEXT'
+  | 'BOOLEAN'
+  | 'SELECT'
+  | 'TABLE'
+
+/** SEBI distinguishes mandatory from voluntary disclosures per indicator. */
+export type BrsrIndicatorType = 'ESSENTIAL' | 'LEADERSHIP'
+
+export interface BrsrQuestion {
+  id: string
+  code: string
+  question_text: string
+  guidance: string | null
+  response_type: BrsrResponseType
+  unit_of_measurement: string | null
+  is_mandatory: boolean
+  order_index: number
+}
+
+export interface BrsrIndicator {
+  id: string
+  code: string
+  title: string
+  indicator_type: BrsrIndicatorType
+  order_index: number
+  section_id: string
+  /** Null for indicators attached directly to a section (Sections A and B). */
+  principle_id: string | null
+  questions: BrsrQuestion[]
+}
+
+export interface BrsrPrinciple {
+  id: string
+  principle_number: number
+  code: string
+  title: string
+  description: string | null
+  order_index: number
+  indicators: BrsrIndicator[]
+}
+
+export interface BrsrSection {
+  id: string
+  code: string
+  title: string
+  description: string | null
+  order_index: number
+  principles: BrsrPrinciple[]
+  /**
+   * Every indicator in this section - INCLUDING the ones nested under
+   * `principles`. Do not render this array directly; use
+   * partitionIndicators() below or principle-level questions appear twice.
+   */
+  indicators: BrsrIndicator[]
+}
+
+export interface BrsrFrameworkDetail extends BrsrFramework {
+  sections: BrsrSection[]
+}
+
+/**
+ * Split a section's indicators into the two groups the API returns.
+ *
+ * An indicator carries a required section_id and an OPTIONAL principle_id,
+ * and both relationships are serialised, so `section.indicators` is a
+ * superset of `principle.indicators`. Verified against the live API:
+ * Full BRSR (SEBI BRSR v2021) has 27 indicators / 140 questions, of which 18
+ * indicators appear in both arrays; BRSR Core has 2 / 4 with 1 duplicated.
+ * Partitioning this way yields exactly 27/140 and 2/4 with no overlap.
+ */
+export function partitionIndicators(section: BrsrSection): {
+  loose: BrsrIndicator[]
+  nested: BrsrIndicator[]
+} {
+  return {
+    loose: section.indicators.filter((i) => i.principle_id === null),
+    nested: section.principles.flatMap((p) => p.indicators),
+  }
+}
+
+/** GET /brsr/{framework_id} - full section/principle/indicator/question tree. */
+export function getFramework(
+  frameworkId: string,
+  token?: string,
+): Promise<BrsrFrameworkDetail> {
+  return request<BrsrFrameworkDetail>(`/brsr/${frameworkId}`, { token })
+}
+
 // ── Project & reporting period endpoints ──
 
 export interface Project {
@@ -165,6 +262,48 @@ export function createSubmission(
   return request<Submission>('/submissions/', {
     method: 'POST',
     body: input,
+    token,
+  })
+}
+
+/** GET /submissions/{id} - a single submission within the caller's scope. */
+export function getSubmission(
+  submissionId: string,
+  token?: string,
+): Promise<Submission> {
+  return request<Submission>(`/submissions/${submissionId}`, { token })
+}
+
+/**
+ * A saved answer for one BRSR question. At most one row exists per
+ * (submission_id, question_id) - the POST endpoint upserts.
+ */
+export interface SubmissionValue {
+  id: string
+  submission_id: string
+  question_id: string
+  value_text: string | null
+  value_numeric: number | null
+  /** Structured payloads (e.g. TABLE answers) land here. */
+  value_json: Record<string, unknown> | null
+  data_source: string | null
+  calculation_method: string | null
+  source_department: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+/**
+ * GET /submissions/{id}/values - every saved answer for a submission.
+ *
+ * Returned as a flat list with no question embedded, so callers must index
+ * by `question_id`. A submission with no answers returns [].
+ */
+export function listSubmissionValues(
+  submissionId: string,
+  token?: string,
+): Promise<SubmissionValue[]> {
+  return request<SubmissionValue[]>(`/submissions/${submissionId}/values`, {
     token,
   })
 }

@@ -16,6 +16,7 @@ import {
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import NewSubmissionPage from './NewSubmissionPage'
+import SubmissionFormPage from './SubmissionFormPage'
 import './DashboardPage.css'
 
 interface DashboardData {
@@ -63,6 +64,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewSubmission, setShowNewSubmission] = useState(false)
+  const [openSubmissionId, setOpenSubmissionId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -135,7 +137,12 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {showNewSubmission ? (
+      {openSubmissionId !== null ? (
+        <SubmissionFormPage
+          submissionId={openSubmissionId}
+          onClose={() => setOpenSubmissionId(null)}
+        />
+      ) : showNewSubmission ? (
         <NewSubmissionPage
           onCreated={() => {
             void load()
@@ -270,6 +277,9 @@ export default function DashboardPage() {
                     <th scope="col">Project</th>
                     <th scope="col">Reporting period</th>
                     <th scope="col">Created</th>
+                    <th scope="col">
+                      <span className="dash-sr">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,6 +295,18 @@ export default function DashboardPage() {
                       <td>{projectName(submission.project_id)}</td>
                       <td>{periodLabel(submission.reporting_period_id)}</td>
                       <td>{formatDate(submission.created_at)}</td>
+                      <td>
+                        <button
+                          className="dash-rowaction"
+                          type="button"
+                          onClick={() => {
+                            setShowNewSubmission(false)
+                            setOpenSubmissionId(submission.id)
+                          }}
+                        >
+                          Open form
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

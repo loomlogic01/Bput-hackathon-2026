@@ -295,6 +295,41 @@
 
 /* ── Submissions table ── */
 
+.dash-rowaction {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #0f766e;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.dash-rowaction:hover {
+  background: #f0fdfa;
+}
+
+.dash-rowaction:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+/* Visually hidden but announced by screen readers. */
+.dash-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .dash-table-wrap {
   overflow-x: auto;
 }

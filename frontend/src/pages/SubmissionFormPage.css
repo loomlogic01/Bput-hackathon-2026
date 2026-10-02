@@ -1,0 +1,284 @@
+.sfp {
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 4rem;
+}
+
+.sfp-loading {
+  padding: 2rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.sfp-alert {
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.88rem;
+}
+
+/* ── Header ── */
+
+.sfp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sfp-title {
+  font-size: 1.15rem;
+  color: #111827;
+}
+
+.sfp-sub {
+  margin-top: 0.2rem;
+  font-size: 0.84rem;
+  color: #6b7280;
+}
+
+.sfp-ghost {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sfp-ghost:hover {
+  background: #f9fafb;
+}
+
+.sfp-banner {
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 1rem;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  background: #f0f9ff;
+  color: #075985;
+  font-size: 0.83rem;
+}
+
+/* ── Filter chips ── */
+
+.sfp-filters {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.sfp-chip {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.sfp-chip--on {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+/* ── Section ── */
+
+.sfp-section {
+  margin-bottom: 1.75rem;
+}
+
+.sfp-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 2px solid #0f766e;
+}
+
+.sfp-section-title {
+  font-size: 1rem;
+  color: #0f766e;
+}
+
+.sfp-count {
+  font-size: 0.74rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+/* ── Principle ── */
+
+.sfp-principle {
+  margin: 1.1rem 0 1.4rem 0.35rem;
+  padding-left: 0.85rem;
+  border-left: 2px solid #e5e7eb;
+}
+
+.sfp-principle-title {
+  margin-bottom: 0.6rem;
+  font-size: 0.88rem;
+  color: #374151;
+}
+
+/* ── Indicator ── */
+
+.sfp-indicator {
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.7rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.sfp-indicator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sfp-indicator-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.sfp-indicator-code {
+  margin-top: 0.15rem;
+  margin-bottom: 0.6rem;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.sfp-tag {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.sfp-tag--ess {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.sfp-tag--lead {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* ── Question ── */
+
+.sfp-question {
+  padding: 0.55rem 0 0.7rem;
+  border-top: 1px solid #f4f5f6;
+}
+
+.sfp-q-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
+}
+
+.sfp-q-code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.sfp-q-text {
+  flex: 1 1 18rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #1f2937;
+}
+
+.sfp-q-unit {
+  font-size: 0.74rem;
+  color: #6b7280;
+}
+
+.sfp-req {
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.sfp-q-guidance {
+  margin-bottom: 0.35rem;
+  font-size: 0.76rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+.sfp-input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.84rem;
+  font-family: inherit;
+}
+
+.sfp-textarea {
+  resize: vertical;
+}
+
+.sfp-input:disabled {
+  opacity: 1;
+  -webkit-text-fill-color: #374151;
+  cursor: default;
+}
+
+/* ── TABLE placeholder ── */
+
+.sfp-table-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 5px;
+  background: #f9fafb;
+}
+
+.sfp-table-note {
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+.sfp-table-value {
+  font-size: 0.74rem;
+  color: #374151;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .sfp {
+    padding: 1.25rem 1rem 3rem;
+  }
+}
