@@ -277,6 +277,139 @@
   word-break: break-word;
 }
 
+/* ── Editable mode (Step 2B) ── */
+
+.sfp-banner--edit {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.sfp-q-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.sfp-answered {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sfp-hint {
+  margin-top: 0.3rem;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+.sfp-json {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* BOOLEAN Yes/No */
+.sfp-bool {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.sfp-bool-btn {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.sfp-bool-btn:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.sfp-bool-btn--on {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.sfp-bool-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.sfp-bool-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+.sfp-bool-other {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.sfp-q-actions {
+  margin-top: 0.5rem;
+}
+
+.sfp-save {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #0f766e;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sfp-save:hover:not(:disabled) {
+  background: #f0fdfa;
+}
+
+.sfp-save:disabled {
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: default;
+}
+
+.sfp-save:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+.sfp-q-error {
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #fecaca;
+  border-radius: 5px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.sfp-q-ok {
+  margin-top: 0.35rem;
+  color: #047857;
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
 @media (max-width: 640px) {
   .sfp {
     padding: 1.25rem 1rem 3rem;

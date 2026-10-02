@@ -308,6 +308,45 @@ export function listSubmissionValues(
   })
 }
 
+/**
+ * Body accepted by POST /submissions/{id}/values.
+ *
+ * IMPORTANT: the endpoint performs a FULL REPLACEMENT upsert - it matches on
+ * (submission_id, question_id) and then overwrites all six value/metadata
+ * columns with whatever this payload carries. Omitting a field therefore
+ * clears it to NULL rather than leaving it untouched. Always send the whole
+ * object, never a sparse patch.
+ */
+export interface SaveSubmissionValueInput {
+  question_id: string
+  value_text?: string | null
+  value_numeric?: number | null
+  /** Must be a JSON object; an array or scalar is rejected with 422. */
+  value_json?: Record<string, unknown> | null
+  data_source?: string | null
+  calculation_method?: string | null
+  source_department?: string | null
+}
+
+/**
+ * POST /submissions/{id}/values - create or replace one answer.
+ *
+ * Returns 201 both when creating a new row and when updating an existing one
+ * (same row id is reused). Only DRAFT and CORRECTION_REQUIRED submissions may
+ * be written; anything else returns 400.
+ */
+export function saveSubmissionValue(
+  submissionId: string,
+  input: SaveSubmissionValueInput,
+  token?: string,
+): Promise<SubmissionValue> {
+  return request<SubmissionValue>(`/submissions/${submissionId}/values`, {
+    method: 'POST',
+    body: input,
+    token,
+  })
+}
+
 // ── Authentication endpoints ──
 // This module performs no token storage. The caller (AuthContext) owns the
 // token and passes it per request.
