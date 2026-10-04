@@ -295,6 +295,12 @@
 
 /* ── Submissions table ── */
 
+.dash-rowactions {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
 .dash-rowaction {
   padding: 0.3rem 0.6rem;
   border: 1px solid #0f766e;

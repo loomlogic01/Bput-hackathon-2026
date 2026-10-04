@@ -418,6 +418,52 @@ export function submitSubmission(
   )
 }
 
+/**
+ * POST /submissions/{id}/review - SUBMITTED or RESUBMITTED -> UNDER_REVIEW.
+ *
+ * The body is always a JSON object because the endpoint takes a
+ * WorkflowActionRequest; omitting it entirely returns 422.
+ */
+export function reviewSubmission(
+  submissionId: string,
+  comments?: string | null,
+  token?: string,
+): Promise<SubmissionWorkflowResponse> {
+  return request<SubmissionWorkflowResponse>(
+    `/submissions/${submissionId}/review`,
+    { method: 'POST', body: { comments: comments ?? null }, token },
+  )
+}
+
+/**
+ * POST /submissions/{id}/request-correction - UNDER_REVIEW -> CORRECTION_REQUIRED.
+ *
+ * `comments` is mandatory and must be non-blank: omitting the key returns 422
+ * (schema) while a whitespace-only value returns 400 (handler). Callers must
+ * validate before sending.
+ */
+export function requestCorrection(
+  submissionId: string,
+  comments: string,
+  token?: string,
+): Promise<SubmissionWorkflowResponse> {
+  return request<SubmissionWorkflowResponse>(
+    `/submissions/${submissionId}/request-correction`,
+    { method: 'POST', body: { comments }, token },
+  )
+}
+
+/** GET /submissions/{id}/workflow - audit trail, oldest first. */
+export function listWorkflow(
+  submissionId: string,
+  token?: string,
+): Promise<SubmissionWorkflowResponse[]> {
+  return request<SubmissionWorkflowResponse[]>(
+    `/submissions/${submissionId}/workflow`,
+    { token },
+  )
+}
+
 // ── Evidence ──
 
 /**

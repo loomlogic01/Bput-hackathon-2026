@@ -16,6 +16,7 @@ import {
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import NewSubmissionPage from './NewSubmissionPage'
+import ReviewerSubmissionPage from './ReviewerSubmissionPage'
 import SubmissionFormPage from './SubmissionFormPage'
 import './DashboardPage.css'
 
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [showNewSubmission, setShowNewSubmission] = useState(false)
   const [openSubmissionId, setOpenSubmissionId] = useState<string | null>(null)
+  const [reviewSubmissionId, setReviewSubmissionId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -141,6 +143,11 @@ export default function DashboardPage() {
         <SubmissionFormPage
           submissionId={openSubmissionId}
           onClose={() => setOpenSubmissionId(null)}
+        />
+      ) : reviewSubmissionId !== null ? (
+        <ReviewerSubmissionPage
+          submissionId={reviewSubmissionId}
+          onClose={() => setReviewSubmissionId(null)}
         />
       ) : showNewSubmission ? (
         <NewSubmissionPage
@@ -296,16 +303,30 @@ export default function DashboardPage() {
                       <td>{periodLabel(submission.reporting_period_id)}</td>
                       <td>{formatDate(submission.created_at)}</td>
                       <td>
-                        <button
-                          className="dash-rowaction"
-                          type="button"
-                          onClick={() => {
-                            setShowNewSubmission(false)
-                            setOpenSubmissionId(submission.id)
-                          }}
-                        >
-                          Open form
-                        </button>
+                        <div className="dash-rowactions">
+                          <button
+                            className="dash-rowaction"
+                            type="button"
+                            onClick={() => {
+                              setShowNewSubmission(false)
+                              setReviewSubmissionId(null)
+                              setOpenSubmissionId(submission.id)
+                            }}
+                          >
+                            Open form
+                          </button>
+                          <button
+                            className="dash-rowaction"
+                            type="button"
+                            onClick={() => {
+                              setShowNewSubmission(false)
+                              setOpenSubmissionId(null)
+                              setReviewSubmissionId(submission.id)
+                            }}
+                          >
+                            Review
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
