@@ -143,6 +143,28 @@ class SubmissionValueResponse(BaseModel):
     updated_at: Any = None
 
 
+# ── Evidence ──
+
+class EvidenceResponse(BaseModel):
+    """An evidence attachment recorded against a submission.
+
+    Deliberately omits ``storage_path``: it is a server-side relative location
+    and is never returned to a client.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    file_name: str
+    content_type: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    description: Optional[str] = None
+    submission_id: uuid.UUID
+    submission_value_id: Optional[uuid.UUID] = None
+    uploaded_by_id: Optional[uuid.UUID] = None
+    created_at: Any = None
+    updated_at: Any = None
+
+
 # ── Submission Workflow ──
 
 class WorkflowActionRequest(BaseModel):
