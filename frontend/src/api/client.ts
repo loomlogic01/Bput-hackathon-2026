@@ -44,15 +44,20 @@ export async function request<T>(
 ): Promise<T> {
   const { body, token, headers, ...rest } = options
 
+  // FormData must be passed through untouched and must NOT carry a
+  // Content-Type header - the browser sets it with the multipart boundary.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+  const hasJsonBody = body !== undefined && !isFormData
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     headers: {
       Accept: 'application/json',
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    ...(body !== undefined ? { body: isFormData ? body : JSON.stringify(body) } : {}),
   })
 
   if (!response.ok) {
@@ -343,6 +348,65 @@ export function saveSubmissionValue(
   return request<SubmissionValue>(`/submissions/${submissionId}/values`, {
     method: 'POST',
     body: input,
+    token,
+  })
+}
+
+// ── Evidence ──
+
+/**
+ * An evidence attachment. Note the API deliberately does not return
+ * `storage_path` - the server-side location is never exposed to a client.
+ */
+export interface Evidence {
+  id: string
+  file_name: string
+  content_type: string | null
+  file_size_bytes: number | null
+  description: string | null
+  submission_id: string
+  /** Set when the file is attached to one specific saved answer. */
+  submission_value_id: string | null
+  uploaded_by_id: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+/** GET /submissions/{id}/evidence - requires submission:read. */
+export function listEvidence(
+  submissionId: string,
+  token?: string,
+): Promise<Evidence[]> {
+  return request<Evidence[]>(`/submissions/${submissionId}/evidence`, { token })
+}
+
+/**
+ * POST /submissions/{id}/evidence - multipart upload.
+ *
+ * Only DRAFT and CORRECTION_REQUIRED submissions accept uploads; other
+ * statuses return 400. An empty file or one over MAX_UPLOAD_SIZE also 400s.
+ *
+ * `submissionValueId` must be the id of a SAVED SubmissionValue (never a
+ * question id); omit it to attach the file at submission level.
+ */
+export function uploadEvidence(
+  submissionId: string,
+  file: File,
+  options: {
+    description?: string
+    submissionValueId?: string
+  } = {},
+  token?: string,
+): Promise<Evidence> {
+  const data = new FormData()
+  data.append('file', file)
+  if (options.description) data.append('description', options.description)
+  if (options.submissionValueId) {
+    data.append('submission_value_id', options.submissionValueId)
+  }
+  return request<Evidence>(`/submissions/${submissionId}/evidence`, {
+    method: 'POST',
+    body: data,
     token,
   })
 }

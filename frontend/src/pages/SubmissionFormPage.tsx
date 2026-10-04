@@ -5,6 +5,7 @@ import type {
   BrsrIndicator,
   BrsrIndicatorType,
   BrsrQuestion,
+  Evidence,
   Submission,
   SubmissionValue,
 } from '../api/client'
@@ -12,9 +13,11 @@ import {
   ApiError,
   getFramework,
   getSubmission,
+  listEvidence,
   listSubmissionValues,
   partitionIndicators,
   saveSubmissionValue,
+  uploadEvidence,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import './SubmissionFormPage.css'
@@ -40,6 +43,10 @@ interface FormState {
   drafts: Record<string, string>
   saveState: Record<string, SaveState>
   message: Record<string, string>
+  /** Evidence grouped by question_id. Submission-level files are not surfaced. */
+  evidence: Record<string, Evidence[]>
+  uploadState: Record<string, SaveState>
+  uploadMessage: Record<string, string>
 }
 
 /** Total questions in a framework, following the verified partition rule. */
@@ -95,6 +102,9 @@ export default function SubmissionFormPage({
     drafts: {},
     saveState: {},
     message: {},
+    evidence: {},
+    uploadState: {},
+    uploadMessage: {},
   })
   /** Guards a late response from landing after unmount. */
   const mounted = useRef(true)
@@ -129,9 +139,10 @@ export default function SubmissionFormPage({
       }
 
       try {
-        const [fw, values] = await Promise.all([
+        const [fw, values, evidence] = await Promise.all([
           getFramework(sub.framework_id, authToken),
           listSubmissionValues(submissionId, authToken),
+          listEvidence(submissionId, authToken),
         ])
         if (cancelled) return
         setSubmission(sub)
@@ -141,6 +152,9 @@ export default function SubmissionFormPage({
           drafts: {},
           saveState: {},
           message: {},
+          evidence: groupEvidence(evidence, values),
+          uploadState: {},
+          uploadMessage: {},
         })
       } catch (err) {
         if (!cancelled) setError(describe(err, 'Could not load the BRSR form.'))
@@ -250,7 +264,57 @@ export default function SubmissionFormPage({
     }))
   }
 
-// SPLIT_C
+  /**
+   * Attach a file to a question's saved answer.
+   *
+   * The API expects the SubmissionValue id in `submission_value_id`, so this
+   * only works once the answer has been saved - the control is not rendered
+   * until `savedValue` exists. Never send a question id here.
+   */
+  async function onUploadEvidence(
+    question: BrsrQuestion,
+    file: File,
+    description: string,
+  ) {
+    if (!token || readOnly) return
+    const savedValue = form.values[question.id]
+    if (!savedValue) return
+
+    setForm((f) => ({
+      ...f,
+      uploadState: { ...f.uploadState, [question.id]: 'saving' },
+      uploadMessage: { ...f.uploadMessage, [question.id]: '' },
+    }))
+
+    try {
+      const created = await uploadEvidence(
+        submissionId,
+        file,
+        {
+          description: description.trim() === '' ? undefined : description.trim(),
+          submissionValueId: savedValue.id,
+        },
+        token,
+      )
+      if (!mounted.current) return
+      setForm((f) => ({
+        ...f,
+        evidence: {
+          ...f.evidence,
+          [question.id]: [...(f.evidence[question.id] ?? []), created],
+        },
+        uploadState: { ...f.uploadState, [question.id]: 'saved' },
+        uploadMessage: { ...f.uploadMessage, [question.id]: '' },
+      }))
+    } catch (err) {
+      if (!mounted.current) return
+      setForm((f) => ({
+        ...f,
+        uploadState: { ...f.uploadState, [question.id]: 'error' },
+        uploadMessage: { ...f.uploadMessage, [question.id]: describeUpload(err) },
+      }))
+    }
+  }
 
   const sections = useMemo(() => {
     if (!framework) return []
@@ -345,6 +409,7 @@ export default function SubmissionFormPage({
           readOnly,
           onEdit,
           onSave: saveQuestion,
+          onUploadEvidence,
         }
         return (
           <section className="sfp-section" key={section.id}>
@@ -389,6 +454,51 @@ function matches(filter: Filter) {
 function omit<T>(record: Record<string, T>, key: string): Record<string, T> {
   const { [key]: _dropped, ...rest } = record
   return rest
+}
+
+/** Human-readable byte size, e.g. 1536 -> "1.5 KB". */
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return 'Size unknown'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/**
+ * Group evidence under the question its answer belongs to.
+ *
+ * Evidence carries a submission_value_id, not a question_id, so the answer's
+ * question is resolved through the saved values. Files attached at submission
+ * level (no submission_value_id) are intentionally not surfaced - there is no
+ * submission-level upload UI in this step.
+ */
+function groupEvidence(
+  evidence: Evidence[],
+  values: SubmissionValue[],
+): Record<string, Evidence[]> {
+  const questionIdByValue = new Map<string, string>()
+  for (const v of values) questionIdByValue.set(v.id, v.question_id)
+
+  const grouped: Record<string, Evidence[]> = {}
+  for (const e of evidence) {
+    if (!e.submission_value_id) continue
+    const questionId = questionIdByValue.get(e.submission_value_id)
+    if (!questionId) continue
+    ;(grouped[questionId] ??= []).push(e)
+  }
+  return grouped
+}
+
+/** Turn an upload/API failure into a readable line. */
+function describeUpload(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 400) return err.message
+    if (err.status === 401) return 'Your session has expired. Please sign in again.'
+    if (err.status === 403) return 'You do not have permission to add evidence.'
+    if (err.status === 404) return 'That submission no longer exists.'
+    return err.message
+  }
+  return 'Upload failed. Please try again.'
 }
 
 type Parsed =
@@ -485,12 +595,14 @@ function IndicatorBlock({
   readOnly,
   onEdit,
   onSave,
+  onUploadEvidence,
 }: {
   indicator: BrsrIndicator
   form: FormState
   readOnly: boolean
   onEdit: (id: string, next: string) => void
   onSave: (q: BrsrQuestion) => void
+  onUploadEvidence: (q: BrsrQuestion, file: File, description: string) => void
 }) {
   const essential = indicator.indicator_type === 'ESSENTIAL'
   return (
@@ -511,6 +623,7 @@ function IndicatorBlock({
           readOnly={readOnly}
           onEdit={onEdit}
           onSave={onSave}
+          onUploadEvidence={onUploadEvidence}
         />
       ))}
     </article>
@@ -523,12 +636,14 @@ function QuestionRow({
   readOnly,
   onEdit,
   onSave,
+  onUploadEvidence,
 }: {
   question: BrsrQuestion
   form: FormState
   readOnly: boolean
   onEdit: (id: string, next: string) => void
   onSave: (q: BrsrQuestion) => void
+  onUploadEvidence: (q: BrsrQuestion, file: File, description: string) => void
 }) {
   const saved = form.values[question.id]
   const state = form.saveState[question.id] ?? 'idle'
@@ -582,8 +697,144 @@ function QuestionRow({
           </button>
         </div>
       )}
+
+      <EvidencePanel
+        question={question}
+        savedValueId={saved?.id}
+        items={form.evidence[question.id] ?? []}
+        state={form.uploadState[question.id] ?? 'idle'}
+        message={form.uploadMessage[question.id] ?? ''}
+        readOnly={readOnly}
+        onUpload={onUploadEvidence}
+      />
     </div>
   )
+}
+
+/**
+ * Compact evidence list plus, for editable submissions whose answer has been
+ * saved, an upload control.
+ *
+ * The upload control is intentionally hidden until a SubmissionValue exists:
+ * the API's `submission_value_id` field takes an answer id, never a question
+ * id, so there is nothing valid to send before the answer is saved.
+ */
+function EvidencePanel({
+  question,
+  savedValueId,
+  items,
+  state,
+  message,
+  readOnly,
+  onUpload,
+}: {
+  question: BrsrQuestion
+  savedValueId: string | undefined
+  items: Evidence[]
+  state: SaveState
+  message: string
+  readOnly: boolean
+  onUpload: (q: BrsrQuestion, file: File, description: string) => void
+}) {
+  const [file, setFile] = useState<File | null>(null)
+  const [description, setDescription] = useState('')
+  const inputId = `ev-${question.id}`
+  const busy = state === 'saving'
+  const canUpload = !readOnly && Boolean(savedValueId) && Boolean(file) && !busy
+
+  function submit() {
+    if (!file || !canUpload) return
+    onUpload(question, file, description)
+    // Clear the picker so the same file can be re-selected if needed.
+    setFile(null)
+    setDescription('')
+  }
+
+  if (items.length === 0 && readOnly) return null
+
+  return (
+    <div className="sfp-ev">
+      {items.length > 0 && (
+        <ul className="sfp-ev-list">
+          {items.map((e) => (
+            <li className="sfp-ev-item" key={e.id}>
+              <div className="sfp-ev-line">
+                <span className="sfp-ev-name">{e.file_name}</span>
+                <span className="sfp-ev-meta">
+                  {formatBytes(e.file_size_bytes)}
+                  {e.content_type ? ` · ${e.content_type}` : ''}
+                </span>
+              </div>
+              {e.description && <p className="sfp-ev-desc">{e.description}</p>}
+              {e.created_at && (
+                <p className="sfp-ev-date">
+                  Uploaded {formatDate(e.created_at)}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!readOnly && savedValueId && (
+        <div className="sfp-ev-upload">
+          <label className="sfp-ev-label" htmlFor={inputId}>
+            Evidence
+          </label>
+          <div className="sfp-ev-controls">
+            <input
+              className="sfp-ev-file"
+              id={inputId}
+              type="file"
+              disabled={busy}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            <input
+              className="sfp-ev-desc-input"
+              type="text"
+              placeholder="Description (optional)"
+              value={description}
+              disabled={busy}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button
+              className="sfp-ev-btn"
+              type="button"
+              disabled={!canUpload}
+              onClick={submit}
+            >
+              {busy ? 'Uploading…' : 'Upload Evidence'}
+            </button>
+          </div>
+          {state === 'saved' && !message && (
+            <p className="sfp-q-ok" role="status">
+              Evidence uploaded
+            </p>
+          )}
+          {message && (
+            <p className="sfp-q-error" role="alert">
+              {message}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!readOnly && !savedValueId && (
+        <p className="sfp-ev-note">Save the answer first to attach evidence.</p>
+      )}
+    </div>
+  )
+}
+
+/** Render an evidence upload timestamp. */
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 /**

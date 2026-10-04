@@ -410,6 +410,138 @@
   font-weight: 500;
 }
 
+/* ── Evidence (compact) ── */
+
+.sfp-ev {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.sfp-ev-list {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sfp-ev-item {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #f9fafb;
+}
+
+.sfp-ev-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sfp-ev-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1f2937;
+  overflow-wrap: anywhere;
+}
+
+.sfp-ev-meta,
+.sfp-ev-date,
+.sfp-ev-note {
+  font-size: 0.72rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.sfp-ev-desc {
+  margin-top: 0.15rem;
+  font-size: 0.76rem;
+  color: #374151;
+  overflow-wrap: anywhere;
+}
+
+.sfp-ev-date {
+  margin-top: 0.1rem;
+}
+
+.sfp-ev-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sfp-ev-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sfp-ev-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sfp-ev-file {
+  font-size: 0.74rem;
+  max-width: 13rem;
+}
+
+.sfp-ev-desc-input {
+  flex: 1 1 9rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-family: inherit;
+}
+
+.sfp-ev-desc-input:focus {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.sfp-ev-btn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #0f766e;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sfp-ev-btn:hover:not(:disabled) {
+  background: #f0fdfa;
+}
+
+.sfp-ev-btn:disabled {
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: default;
+}
+
+.sfp-ev-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+.sfp-ev-note {
+  margin: 0;
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
   .sfp {
     padding: 1.25rem 1rem 3rem;
