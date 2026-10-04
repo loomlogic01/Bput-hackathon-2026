@@ -17,6 +17,7 @@ import {
   listEvidence,
   listSubmissionValues,
   partitionIndicators,
+  resubmitSubmission,
   saveSubmissionValue,
   submitSubmission,
   uploadEvidence,
@@ -294,22 +295,33 @@ export default function SubmissionFormPage({
   }
 
   /**
-   * Submit for review.
+   * Hand the submission to a reviewer.
+   *
+   * DRAFT goes through /submit, which validates mandatory questions and can
+   * come back with a missing_questions list. CORRECTION_REQUIRED goes through
+   * /resubmit, which the backend does NOT validate - deliberately preserved.
+   * RESUBMITTED is a distinct status from SUBMITTED and is read-only.
    *
    * Answers are never touched here: on a validation failure the form state is
    * left exactly as it was, so nothing the user has typed is lost.
    */
   async function onSubmit() {
     if (!token || readOnly || submitOutcome.isSubmitting) return
-    // Never submit while an answer save is still in flight.
+    // Never hand over while an answer save is still in flight.
     if (Object.values(form.saveState).some((s) => s === 'saving')) return
 
+    const isCorrection = submission?.status === 'CORRECTION_REQUIRED'
     const answered = Object.keys(form.values).length
     const confirmed = window.confirm(
-      `Submit this submission for review?\n\n` +
-        `${answered} of ${framework ? countQuestions(framework) : answered} ` +
-        `questions answered.\n\n` +
-        `Once submitted you cannot edit it until a reviewer requests corrections.`,
+      isCorrection
+        ? `Resubmit this submission for review?\n\n` +
+            `${answered} of ${framework ? countQuestions(framework) : answered} ` +
+            `questions answered.\n\n` +
+            `Once resubmitted you cannot edit it until a reviewer responds.`
+        : `Submit this submission for review?\n\n` +
+            `${answered} of ${framework ? countQuestions(framework) : answered} ` +
+            `questions answered.\n\n` +
+            `Once submitted you cannot edit it until a reviewer requests corrections.`,
     )
     if (!confirmed) return
 
@@ -322,17 +334,25 @@ export default function SubmissionFormPage({
     }))
 
     try {
-      await submitSubmission(submissionId, token)
+      if (isCorrection) {
+        // Comments are optional on this transition; send an explicit null.
+        await resubmitSubmission(submissionId, null, token)
+      } else {
+        await submitSubmission(submissionId, token)
+      }
       if (!mounted.current) return
       // Re-read the submission so the displayed status is the server's truth;
-      // readOnly then follows automatically because SUBMITTED is not editable.
+      // readOnly then follows automatically (neither SUBMITTED nor RESUBMITTED
+      // is in EDITABLE).
       const fresh = await getSubmission(submissionId, token)
       if (!mounted.current) return
       setSubmission(fresh)
       setSubmitOutcome({
         isSubmitting: false,
         missing: [],
-        message: 'Submission submitted for review.',
+        message: isCorrection
+          ? 'Resubmitted for review.'
+          : 'Submission submitted for review.',
         error: null,
         succeeded: true,
       })
@@ -507,7 +527,11 @@ export default function SubmissionFormPage({
             disabled={submitOutcome.isSubmitting || anySavePending}
             onClick={onSubmit}
           >
-            {submitOutcome.isSubmitting ? 'Submitting…' : 'Submit for Review'}
+            {submitOutcome.isSubmitting
+              ? 'Submitting…'
+              : submission?.status === 'CORRECTION_REQUIRED'
+                ? 'Resubmit for Review'
+                : 'Submit for Review'}
           </button>
           {anySavePending && (
             <span className="sfp-submit-hint">

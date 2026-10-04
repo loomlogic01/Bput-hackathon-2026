@@ -419,6 +419,24 @@ export function submitSubmission(
 }
 
 /**
+ * POST /submissions/{id}/resubmit - CORRECTION_REQUIRED -> RESUBMITTED.
+ *
+ * The endpoint takes a WorkflowActionRequest body, so `{}` is always sent;
+ * omitting the body entirely returns 422. The backend performs NO
+ * mandatory-question validation on this transition (unlike /submit).
+ */
+export function resubmitSubmission(
+  submissionId: string,
+  comments?: string | null,
+  token?: string,
+): Promise<SubmissionWorkflowResponse> {
+  return request<SubmissionWorkflowResponse>(
+    `/submissions/${submissionId}/resubmit`,
+    { method: 'POST', body: { comments: comments ?? null }, token },
+  )
+}
+
+/**
  * POST /submissions/{id}/review - SUBMITTED or RESUBMITTED -> UNDER_REVIEW.
  *
  * The body is always a JSON object because the endpoint takes a
