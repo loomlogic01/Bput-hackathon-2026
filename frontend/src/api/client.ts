@@ -21,13 +21,32 @@ export class ApiError extends Error {
    * caller can explain what failed; `message` keeps the status-line fallback.
    */
   readonly details?: unknown[]
+  /**
+   * Some endpoints (e.g. submit's mandatory-question check) return a *structured*
+   * object in `detail` rather than a string. Preserved here so the caller can
+   * read its fields instead of only seeing "400 Bad Request".
+   */
+  readonly objectDetail?: Record<string, unknown>
 
-  constructor(status: number, message: string, details?: unknown[]) {
+  constructor(
+    status: number,
+    message: string,
+    details?: unknown[],
+    objectDetail?: Record<string, unknown>,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.details = details
+    this.objectDetail = objectDetail
   }
+}
+
+/** One unanswered mandatory question returned by POST /submissions/{id}/submit. */
+export interface MissingQuestion {
+  question_id: string
+  code: string
+  question: string
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -64,6 +83,7 @@ export async function request<T>(
     // FastAPI reports errors as { "detail": ... }; fall back to the status line.
     let detail = `${response.status} ${response.statusText}`
     let details: unknown[] | undefined
+    let objectDetail: Record<string, unknown> | undefined
     try {
       const payload = await response.json()
       if (payload && typeof payload.detail === 'string') {
@@ -71,11 +91,22 @@ export async function request<T>(
       } else if (payload && Array.isArray(payload.detail)) {
         // 422 validation errors - keep the array for the caller to render.
         details = payload.detail
+      } else if (
+        payload &&
+        payload.detail &&
+        typeof payload.detail === 'object'
+      ) {
+        // Structured detail (e.g. submit's missing_questions) - keep the object.
+        objectDetail = payload.detail as Record<string, unknown>
+        detail =
+          typeof payload.detail.message === 'string'
+            ? payload.detail.message
+            : detail
       }
     } catch {
       // Non-JSON error body - keep the status line.
     }
-    throw new ApiError(response.status, detail, details)
+    throw new ApiError(response.status, detail, details, objectDetail)
   }
 
   if (response.status === 204) return undefined as T
@@ -350,6 +381,41 @@ export function saveSubmissionValue(
     body: input,
     token,
   })
+}
+
+// ── Workflow ──
+
+/** An ApprovalWorkflow audit row returned by each transition endpoint. */
+export interface SubmissionWorkflowResponse {
+  id: string
+  submission_id: string
+  from_status: string
+  to_status: string
+  action_by_id: string | null
+  comments: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+/**
+ * POST /submissions/{id}/submit - move DRAFT -> SUBMITTED.
+ *
+ * The endpoint takes a WorkflowActionRequest body, so `{}` is sent even when
+ * no comment is supplied; omitting the body entirely returns 422.
+ *
+ * Returns 200 on success. When mandatory questions are still unanswered it
+ * returns 400 whose `detail` is an object:
+ *   { message, missing_questions: [{ question_id, code, question }] }
+ * which `request()` surfaces as ApiError.objectDetail.
+ */
+export function submitSubmission(
+  submissionId: string,
+  token?: string,
+): Promise<SubmissionWorkflowResponse> {
+  return request<SubmissionWorkflowResponse>(
+    `/submissions/${submissionId}/submit`,
+    { method: 'POST', body: {}, token },
+  )
 }
 
 // ── Evidence ──

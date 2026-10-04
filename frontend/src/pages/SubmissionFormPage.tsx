@@ -6,6 +6,7 @@ import type {
   BrsrIndicatorType,
   BrsrQuestion,
   Evidence,
+  MissingQuestion,
   Submission,
   SubmissionValue,
 } from '../api/client'
@@ -17,6 +18,7 @@ import {
   listSubmissionValues,
   partitionIndicators,
   saveSubmissionValue,
+  submitSubmission,
   uploadEvidence,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -47,6 +49,19 @@ interface FormState {
   evidence: Record<string, Evidence[]>
   uploadState: Record<string, SaveState>
   uploadMessage: Record<string, string>
+}
+
+/** Outcome of the last "Submit for Review" attempt. */
+interface SubmitOutcome {
+  isSubmitting: boolean
+  /** Set when the API rejected the submit because questions are missing. */
+  missing: MissingQuestion[]
+  /** The API's message, shown verbatim. */
+  message: string
+  /** Other (non-validation) failures, e.g. the status guard or a 403. */
+  error: string | null
+  /** True once a submit has succeeded in this session. */
+  succeeded: boolean
 }
 
 /** Total questions in a framework, following the verified partition rule. */
@@ -255,6 +270,101 @@ export default function SubmissionFormPage({
     }
   }
 
+  const [submitOutcome, setSubmitOutcome] = useState<SubmitOutcome>({
+    isSubmitting: false,
+    missing: [],
+    message: '',
+    error: null,
+    succeeded: false,
+  })
+
+  /** Scroll a listed missing question into view and focus it.
+   *
+   * The anchor is the question ROW, not the control: some response types
+   * (BOOLEAN) render a non-focusable div with no id, so a control-only lookup
+   * silently failed for them. Missing targets are ignored on purpose.
+   */
+  function focusQuestion(questionId: string) {
+    const el = document.getElementById(`q-${questionId}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (typeof el.focus === 'function') {
+      el.focus({ preventScroll: true })
+    }
+  }
+
+  /**
+   * Submit for review.
+   *
+   * Answers are never touched here: on a validation failure the form state is
+   * left exactly as it was, so nothing the user has typed is lost.
+   */
+  async function onSubmit() {
+    if (!token || readOnly || submitOutcome.isSubmitting) return
+    // Never submit while an answer save is still in flight.
+    if (Object.values(form.saveState).some((s) => s === 'saving')) return
+
+    const answered = Object.keys(form.values).length
+    const confirmed = window.confirm(
+      `Submit this submission for review?\n\n` +
+        `${answered} of ${framework ? countQuestions(framework) : answered} ` +
+        `questions answered.\n\n` +
+        `Once submitted you cannot edit it until a reviewer requests corrections.`,
+    )
+    if (!confirmed) return
+
+    setSubmitOutcome((o) => ({
+      ...o,
+      isSubmitting: true,
+      missing: [],
+      message: '',
+      error: null,
+    }))
+
+    try {
+      await submitSubmission(submissionId, token)
+      if (!mounted.current) return
+      // Re-read the submission so the displayed status is the server's truth;
+      // readOnly then follows automatically because SUBMITTED is not editable.
+      const fresh = await getSubmission(submissionId, token)
+      if (!mounted.current) return
+      setSubmission(fresh)
+      setSubmitOutcome({
+        isSubmitting: false,
+        missing: [],
+        message: 'Submission submitted for review.',
+        error: null,
+        succeeded: true,
+      })
+    } catch (err) {
+      if (!mounted.current) return
+      if (err instanceof ApiError && err.status === 400 && err.objectDetail) {
+        const raw = err.objectDetail.missing_questions
+        const missing: MissingQuestion[] = Array.isArray(raw)
+          ? (raw as MissingQuestion[])
+          : []
+        setSubmitOutcome({
+          isSubmitting: false,
+          missing,
+          message:
+            typeof err.objectDetail.message === 'string'
+              ? err.objectDetail.message
+              : err.message,
+          error: null,
+          succeeded: false,
+        })
+      } else {
+        setSubmitOutcome({
+          isSubmitting: false,
+          missing: [],
+          message: '',
+          error: describeSave(err),
+          succeeded: false,
+        })
+      }
+    }
+  }
+
   function onEdit(questionId: string, next: string) {
     setForm((f) => ({
       ...f,
@@ -358,6 +468,8 @@ export default function SubmissionFormPage({
 
   const total = countQuestions(framework)
   const answered = Object.keys(form.values).length
+  /** True while any per-question answer save is still in flight. */
+  const anySavePending = Object.values(form.saveState).some((s) => s === 'saving')
 
   return (
     <div className="sfp">
@@ -384,6 +496,66 @@ export default function SubmissionFormPage({
         <div className="sfp-banner sfp-banner--edit" role="note">
           Answers save one question at a time. Only the question you press Save
           on is sent — other edits stay on screen unsaved.
+        </div>
+      )}
+
+      {!readOnly && (
+        <div className="sfp-submit-bar">
+          <button
+            className="sfp-submit"
+            type="button"
+            disabled={submitOutcome.isSubmitting || anySavePending}
+            onClick={onSubmit}
+          >
+            {submitOutcome.isSubmitting ? 'Submitting…' : 'Submit for Review'}
+          </button>
+          {anySavePending && (
+            <span className="sfp-submit-hint">
+              Waiting for an answer to finish saving…
+            </span>
+          )}
+        </div>
+      )}
+
+      {submitOutcome.succeeded && (
+        <p className="sfp-submit-ok" role="status">
+          {submitOutcome.message}
+        </p>
+      )}
+
+      {submitOutcome.error && (
+        <p className="sfp-submit-err" role="alert">
+          {submitOutcome.error}
+        </p>
+      )}
+
+      {submitOutcome.missing.length > 0 && (
+        <div className="sfp-missing" role="alert">
+          <p className="sfp-missing-head">
+            {submitOutcome.message}{' '}
+            <strong>
+              {submitOutcome.missing.length} mandatory question
+              {submitOutcome.missing.length === 1 ? '' : 's'} still unanswered.
+            </strong>
+          </p>
+          <ul className="sfp-missing-list">
+            {submitOutcome.missing.map((m) => (
+              <li key={m.question_id} className="sfp-missing-item">
+                {/* One button per row, so the click never relies on bubbling
+                    from the nested code/text spans. */}
+                <button
+                  className="sfp-missing-link"
+                  type="button"
+                  title={`Go to question ${m.code}`}
+                  aria-label={`Go to question ${m.code}: ${m.question}`}
+                  onClick={() => focusQuestion(m.question_id)}
+                >
+                  <span className="sfp-missing-code">{m.code}</span>
+                  <span className="sfp-missing-text">{m.question}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -650,10 +822,13 @@ function QuestionRow({
   const error = form.message[question.id] ?? ''
   const answered = Boolean(saved)
 
+  // The row is the stable scroll anchor and exists for every response type;
+  // tabIndex lets focusQuestion() move focus here even when the control is a
+  // plain div (BOOLEAN).
   return (
-    <div className="sfp-question">
+    <div className="sfp-question" id={`q-${question.id}`} tabIndex={-1}>
       <div className="sfp-q-head">
-        <label className="sfp-q-label" htmlFor={`q-${question.id}`}>
+        <label className="sfp-q-label" htmlFor={`qc-${question.id}`}>
           <span className="sfp-q-code">{question.code}</span>
           <span className="sfp-q-text">{question.question_text}</span>
           {question.unit_of_measurement && (
@@ -853,7 +1028,10 @@ function ResponseControl({
   readOnly: boolean
   onChange: (next: string) => void
 }) {
-  const id = `q-${question.id}`
+  // Control ids keep the UUID scheme but use a distinct prefix so they never
+  // collide with the row's q-<id> scroll anchor (duplicate ids are invalid
+  // HTML and would make getElementById return the wrong node).
+  const id = `qc-${question.id}`
   const off = readOnly ? { disabled: true } : {}
   const common = {
     id,
