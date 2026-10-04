@@ -332,6 +332,25 @@ def _missing_mandatory_questions(
     ]
 
 
+def _require_mandatory_answers(db: Session, submission: Submission) -> None:
+    """Reject a handover while mandatory questions are unanswered.
+
+    Shared by /submit and /resubmit so both enforce exactly the same rules and
+    return exactly the same structured 400. All completeness logic lives in
+    _missing_mandatory_questions; this only raises, so there is one
+    implementation and one error shape.
+    """
+    missing = _missing_mandatory_questions(db, submission)
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": "Submission has unanswered mandatory questions.",
+                "missing_questions": missing,
+            },
+        )
+
+
 # ── Workflow transitions ──
 # Each endpoint delegates to _apply_transition, which owns status validation,
 # the status update, and the ApprovalWorkflow audit row.
@@ -349,16 +368,7 @@ def submit_submission(
     # "Cannot submit..." 400 rather than a validation error.
     submission = load_scoped_submission(submission_id, db, current_user)
     _guard_transition(submission, "submit")
-
-    missing = _missing_mandatory_questions(db, submission)
-    if missing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "message": "Submission has unanswered mandatory questions.",
-                "missing_questions": missing,
-            },
-        )
+    _require_mandatory_answers(db, submission)
 
     return _apply_transition(submission_id, "submit", payload.comments, db, current_user)
 
@@ -402,7 +412,18 @@ def resubmit_submission(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permissions(PERM_SUBMIT)),
 ):
-    """CORRECTION_REQUIRED -> RESUBMITTED. Corrections have been applied."""
+    """CORRECTION_REQUIRED -> RESUBMITTED, once corrections are complete.
+
+    The same mandatory-question validation as /submit. Without it, a value
+    blanked during CORRECTION_REQUIRED could reach RESUBMITTED - and therefore
+    APPROVED - while incomplete.
+    """
+    # Scope and status first, so an out-of-scope submission still 403s and a
+    # non-CORRECTION_REQUIRED one still returns the existing status 400.
+    submission = load_scoped_submission(submission_id, db, current_user)
+    _guard_transition(submission, "resubmit")
+    _require_mandatory_answers(db, submission)
+
     return _apply_transition(submission_id, "resubmit", payload.comments, db, current_user)
 
 
