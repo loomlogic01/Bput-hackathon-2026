@@ -29,7 +29,12 @@ from backend.app.api.v1.schemas import (
     WorkflowActionRequest,
 )
 from backend.app.db.database import get_db
-from backend.app.db.models.brsr import BRSRFramework, BRSRQuestion
+from backend.app.db.models.brsr import (
+    BRSRFramework,
+    BRSRIndicator,
+    BRSRQuestion,
+    BRSRSection,
+)
 from backend.app.db.models.organization import Project
 from backend.app.db.models.reporting import ReportingPeriod
 from backend.app.db.models.submission import (
@@ -86,6 +91,26 @@ def load_scoped_submission(
     return submission
 
 
+def _guard_transition(submission: Submission, action: str) -> None:
+    """Reject a transition the state machine does not allow.
+
+    Extracted verbatim from _apply_transition so `submit` can run the same
+    status check *before* validating mandatory questions. Without this, an
+    already-submitted submission would report unanswered questions instead of
+    the existing "Cannot submit..." error.
+    """
+    allowed_from, _ = WORKFLOW_TRANSITIONS[action]
+    if submission.status not in allowed_from:
+        expected = " or ".join(s.value for s in allowed_from)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot {action} a submission in {submission.status.value} status. "
+                f"Expected current status: {expected}."
+            ),
+        )
+
+
 def _apply_transition(
     submission_id: uuid.UUID,
     action: str,
@@ -99,18 +124,8 @@ def _apply_transition(
     caller's scope, and 400 if its status does not allow this action.
     """
     allowed_from, to_status = WORKFLOW_TRANSITIONS[action]
-
     submission = load_scoped_submission(submission_id, db, current_user)
-
-    if submission.status not in allowed_from:
-        expected = " or ".join(s.value for s in allowed_from)
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Cannot {action} a submission in {submission.status.value} status. "
-                f"Expected current status: {expected}."
-            ),
-        )
+    _guard_transition(submission, action)
 
     from_status = submission.status
     submission.status = to_status
@@ -253,6 +268,70 @@ def list_submission_values(
     return db.query(SubmissionValue).filter_by(submission_id=submission_id).all()
 
 
+def _has_meaningful_value(value: Optional[SubmissionValue]) -> bool:
+    """True when a stored answer actually carries data.
+
+    The values endpoint accepts a row whose three value columns are all NULL,
+    so the existence of a SubmissionValue does not by itself mean the question
+    was answered.
+    """
+    if value is None:
+        return False
+    if value.value_numeric is not None:
+        return True
+    if value.value_text is not None and value.value_text.strip():
+        return True
+    if value.value_json:
+        return True
+    return False
+
+
+def _missing_mandatory_questions(
+    db: Session, submission: Submission
+) -> List[dict]:
+    """Mandatory questions in this submission's framework with no usable answer.
+
+    Scoped question -> indicator -> section -> framework, so questions that
+    belong to another framework can never block this submission. Ordering is
+    by section, then indicator, then question so the error list is stable.
+    """
+    mandatory = (
+        db.query(BRSRQuestion)
+        .join(BRSRIndicator, BRSRQuestion.indicator_id == BRSRIndicator.id)
+        .join(BRSRSection, BRSRIndicator.section_id == BRSRSection.id)
+        .filter(
+            BRSRSection.framework_id == submission.framework_id,
+            BRSRQuestion.is_mandatory.is_(True),
+        )
+        .order_by(
+            BRSRSection.order_index,
+            BRSRIndicator.order_index,
+            BRSRQuestion.order_index,
+        )
+        .all()
+    )
+    if not mandatory:
+        return []
+
+    answered = {
+        v.question_id
+        for v in db.query(SubmissionValue)
+        .filter_by(submission_id=submission.id)
+        .all()
+        if _has_meaningful_value(v)
+    }
+
+    return [
+        {
+            "question_id": str(q.id),
+            "code": q.code,
+            "question": q.question_text,
+        }
+        for q in mandatory
+        if q.id not in answered
+    ]
+
+
 # ── Workflow transitions ──
 # Each endpoint delegates to _apply_transition, which owns status validation,
 # the status update, and the ApprovalWorkflow audit row.
@@ -264,7 +343,23 @@ def submit_submission(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permissions(PERM_SUBMIT)),
 ):
-    """DRAFT -> SUBMITTED. Hand the draft over for review."""
+    """DRAFT -> SUBMITTED, once every mandatory question is answered."""
+    # Scope and status are checked first, so an out-of-scope submission still
+    # 403s and a non-DRAFT submission still returns the existing
+    # "Cannot submit..." 400 rather than a validation error.
+    submission = load_scoped_submission(submission_id, db, current_user)
+    _guard_transition(submission, "submit")
+
+    missing = _missing_mandatory_questions(db, submission)
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": "Submission has unanswered mandatory questions.",
+                "missing_questions": missing,
+            },
+        )
+
     return _apply_transition(submission_id, "submit", payload.comments, db, current_user)
 
 
