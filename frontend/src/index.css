@@ -30,6 +30,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Shown while a token in sessionStorage is being verified on startup. */
+
+.auth-boot {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
 h1,
 h2,
 h3,
