@@ -160,6 +160,11 @@ class ConsolidationMetric(BaseModel):
 
     Only questions of type NUMBER are ever present. Two questions are never
     merged, even if their unit_of_measurement strings match.
+
+    ``aggregated_value`` is always the raw SUM of ``value_numeric``. For most
+    questions that is the meaningful consolidated figure. For a percentage it is
+    NOT - summing percentages is meaningless - which is why those questions are
+    flagged and a weighted equivalent is published under ``derived_kpis``.
     """
     question_id: uuid.UUID
     question_code: str
@@ -175,8 +180,34 @@ class ConsolidationMetric(BaseModel):
     principle_code: Optional[str] = None
     principle_title: Optional[str] = None
     aggregated_value: float
+    # How aggregated_value was produced. Always "sum" - stated explicitly so a
+    # client never has to guess whether it is an average.
+    aggregation: str = "sum"
+    # False when the SUM is arithmetically correct but analytically meaningless
+    # (a percentage). The meaningful figure is in derived_kpis.
+    aggregated_value_is_meaningful: bool = True
+    # Set when a derived KPI supersedes this raw sum for reporting.
+    superseded_by_derived_kpi: Optional[str] = None
     contributing_project_count: int
     contributing_project_ids: List[uuid.UUID] = []
+
+
+class ConsolidationDerivedKpi(BaseModel):
+    """A consolidated figure that cannot be obtained by summing.
+
+    Currently the consumption-weighted renewable-electricity share. Source
+    question codes are fixed («Q_P6_ELEC_CONS», «Q_P6_RENEW_PCT»); ids are
+    resolved from the framework at request time, nothing is hard-coded.
+    When no contributing project has a usable pair, ``value`` is null and
+    ``contributing_project_count`` is 0 (never a division-by-zero).
+    """
+    code: str
+    label: str
+    unit: Optional[str] = None
+    calculation_method: str
+    source_question_codes: List[str] = []
+    value: Optional[float] = None
+    contributing_project_count: int
 
 
 class ConsolidationTotals(BaseModel):
@@ -187,13 +218,18 @@ class ConsolidationTotals(BaseModel):
 class ConsolidationResponse(BaseModel):
     """Request-time aggregate of approved/locked submissions.
 
-    An empty dataset is a valid 200 with empty ``projects``/``metrics`` lists,
-    never an error.
+    An empty dataset is a valid 200 with empty ``projects``/``metrics``
+    lists, never an error. ``derived_kpis`` always carries exactly one
+    entry for the renewable-electricity KPI; its ``value`` is null when no
+    contributing project has a usable pair.
     """
     reporting_period: ConsolidationPeriodSummary
     framework: ConsolidationFrameworkSummary
     projects: List[ConsolidationProject] = []
     metrics: List[ConsolidationMetric] = []
+    # Consolidated figures computed from the per-project values, for metrics
+    # where SUM is not meaningful.
+    derived_kpis: List[ConsolidationDerivedKpi] = []
     totals: ConsolidationTotals
 
 

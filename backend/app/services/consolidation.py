@@ -14,10 +14,22 @@ Design constraints, all deliberate:
   this filter is the only guard against summing a string.
 * **Grouped strictly by question.** Two questions are never merged, even when
   their unit_of_measurement strings happen to match.
+* **SUM semantics are never silently changed.** ``aggregated_value`` stays the
+  raw SUM of ``value_numeric``. Where a SUM is arithmetically right but
+  analytically meaningless - a percentage - the metric is flagged
+  (``aggregated_value_is_meaningful: false``) and the defensible figure is
+  published separately under ``derived_kpis``. The raw sum is still returned so
+  existing consumers keep working.
+* **Derived KPIs only combine what is actually present.** A project counts only
+  if it has both a positive finite basis value and a finite percentage in
+  [0, 100]; otherwise it is skipped, never estimated. With nothing valid to
+  divide by the KPI keeps ``value=None`` and ``contributing_project_count=0``
+  instead of being reported as zero.
 * **Scope is enforced by the caller.** The service receives an already-resolved
   set of project ids and never widens it.
 """
 
+import math
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Sequence, Set
@@ -26,7 +38,9 @@ from sqlalchemy.orm import Session
 
 from backend.app.db.models.brsr import (
     BRSRFramework,
+    BRSRIndicator,
     BRSRQuestion,
+    BRSRSection,
     QuestionResponseType,
 )
 from backend.app.db.models.organization import (
@@ -49,6 +63,39 @@ REPORTABLE_STATUSES = (SubmissionStatus.APPROVED, SubmissionStatus.LOCKED)
 _STATUS_RANK = {
     SubmissionStatus.LOCKED: 0,
     SubmissionStatus.APPROVED: 1,
+}
+
+# Consolidated figures that cannot be obtained by summing.
+#
+# Questions are referenced by CODE and resolved against the requested framework
+# at request time, so no UUID is ever hard-coded and the definition survives a
+# reseed with different primary keys.
+#
+#   basis_question_code   the additive quantity used as the weight (here, MWh)
+#   percent_question_code the per-project share that must NOT be summed
+#
+# The published value is
+#   sum(electricity_i * pct_i / 100) / sum(electricity_i) * 100
+# i.e. consumption-weighted, which is the only defensible way to combine
+# percentages across different-sized sites.
+DERIVED_KPIS = (
+    {
+        "code": "P6_RENEWABLE_ELECTRICITY_PCT",
+        "label": "Renewable electricity consumption percentage",
+        "unit": "%",
+        "calculation_method": "consumption-weighted",
+        "basis_question_code": "Q_P6_ELEC_CONS",
+        "percent_question_code": "Q_P6_RENEW_PCT",
+    },
+)
+
+# Question codes whose raw SUM is arithmetically right but analytically
+# meaningless. Their metrics are flagged so a client cannot display the sum as a
+# consolidated percentage.
+_PERCENT_CODES = frozenset(k["percent_question_code"] for k in DERIVED_KPIS)
+# Maps a percent question code -> the derived KPI that supersedes it.
+_SUPERSEDER = {
+    k["percent_question_code"]: k["code"] for k in DERIVED_KPIS
 }
 
 
@@ -151,6 +198,111 @@ def _period_summary(period: ReportingPeriod) -> Dict[str, object]:
     }
 
 
+def _question_by_code(
+    db: Session, framework: BRSRFramework, code: str
+) -> Optional[BRSRQuestion]:
+    """Resolve one question of the requested framework by its code.
+
+    Scoped to the framework so a same-coded question in another framework can
+    never leak in.
+    """
+    return (
+        db.query(BRSRQuestion)
+        .join(BRSRIndicator, BRSRQuestion.indicator_id == BRSRIndicator.id)
+        .join(BRSRSection, BRSRIndicator.section_id == BRSRSection.id)
+        .filter(BRSRSection.framework_id == framework.id, BRSRQuestion.code == code)
+        .first()
+    )
+
+
+def compute_renewable_electricity_pct(
+    pairs: Sequence[tuple],
+) -> tuple:
+    """Consumption-weighted renewable share for (electricity, pct) pairs.
+
+    Only pairs with a present, finite electricity value > 0 and a present,
+    finite percentage in [0, 100] contribute; everything else is ignored.
+    Returns ``(value, contributing_project_count)`` where ``value`` is None
+    when nothing contributes (never a division-by-zero).
+    """
+    weighted_sum = 0.0
+    basis_sum = 0.0
+    used = 0
+    for electricity, pct in pairs:
+        if (
+            electricity is None
+            or pct is None
+            or not math.isfinite(electricity)
+            or not math.isfinite(pct)
+            or electricity <= 0
+            or pct < 0
+            or pct > 100
+        ):
+            continue
+        weighted_sum += electricity * (pct / 100.0)
+        basis_sum += electricity
+        used += 1
+    if used and basis_sum > 0:
+        return weighted_sum / basis_sum * 100.0, used
+    return None, 0
+
+
+def _compute_derived_kpis(
+    db: Session,
+    framework: BRSRFramework,
+    per_project: Dict[uuid.UUID, Dict[uuid.UUID, float]],
+) -> List[Dict[str, object]]:
+    """Build the consolidated figures that SUM cannot express.
+
+    One entry is always returned per spec in ``DERIVED_KPIS``. A project
+    contributes only when it has BOTH a present, finite electricity value
+    > 0 AND a present, finite renewable percentage in [0, 100]. Anything
+    else is ignored, and with no valid contributor the entry keeps
+    ``value=None`` and ``contributing_project_count=0`` rather than a
+    division-by-zero.
+    """
+    out: List[Dict[str, object]] = []
+    for spec in DERIVED_KPIS:
+        basis = _question_by_code(db, framework, spec["basis_question_code"])
+        percent = _question_by_code(db, framework, spec["percent_question_code"])
+        entry: Dict[str, object] = {
+            "code": spec["code"],
+            "label": spec["label"],
+            "unit": spec["unit"],
+            "calculation_method": spec["calculation_method"],
+            "source_question_codes": [
+                spec["basis_question_code"],
+                spec["percent_question_code"],
+            ],
+            "value": None,
+            "contributing_project_count": 0,
+        }
+        if basis is None or percent is None:
+            out.append(entry)
+            continue
+
+        basis_values = per_project.get(basis.id, {})
+        percent_values = per_project.get(percent.id, {})
+
+        pairs = [
+            (electricity, percent_values.get(project_id))
+            for project_id, electricity in basis_values.items()
+        ]
+        # Projects carrying only a percentage (no electricity row) never appear
+        # in basis_values; scan them too so a missing-electricity project is
+        # explicitly evaluated (and ignored) rather than silently absent.
+        basis_ids = set(basis_values)
+        for project_id, pct in percent_values.items():
+            if project_id not in basis_ids:
+                pairs.append((None, pct))
+        value, used = compute_renewable_electricity_pct(pairs)
+        if value is not None:
+            entry["value"] = value
+            entry["contributing_project_count"] = used
+        out.append(entry)
+    return out
+
+
 def _empty_result(
     reporting_period: ReportingPeriod, framework: BRSRFramework
 ) -> Dict[str, object]:
@@ -164,6 +316,21 @@ def _empty_result(
         },
         "projects": [],
         "metrics": [],
+        "derived_kpis": [
+            {
+                "code": spec["code"],
+                "label": spec["label"],
+                "unit": spec["unit"],
+                "calculation_method": spec["calculation_method"],
+                "source_question_codes": [
+                    spec["basis_question_code"],
+                    spec["percent_question_code"],
+                ],
+                "value": None,
+                "contributing_project_count": 0,
+            }
+            for spec in DERIVED_KPIS
+        ],
         "totals": {"projects_contributing": 0, "metrics_aggregated": 0},
     }
 
@@ -214,11 +381,15 @@ def build_consolidation(
     totals: Dict[uuid.UUID, float] = {}
     projects: Dict[uuid.UUID, Set[uuid.UUID]] = {}
     questions: Dict[uuid.UUID, BRSRQuestion] = {}
+    # question_id -> {project_id: value_numeric}. Needed for the derived KPIs,
+    # which combine per-project values rather than totals.
+    per_project: Dict[uuid.UUID, Dict[uuid.UUID, float]] = {}
     for value, question in rows:
-        totals[question.id] = totals.get(question.id, 0.0) + float(value.value_numeric)
-        projects.setdefault(question.id, set()).add(
-            project_by_submission[value.submission_id]
-        )
+        project_id = project_by_submission[value.submission_id]
+        number = float(value.value_numeric)
+        totals[question.id] = totals.get(question.id, 0.0) + number
+        projects.setdefault(question.id, set()).add(project_id)
+        per_project.setdefault(question.id, {})[project_id] = number
         questions[question.id] = question
 
     metrics = []
@@ -230,10 +401,14 @@ def build_consolidation(
     )
     for question in ordered:
         contributing = projects[question.id]
+        is_percent = question.code in _PERCENT_CODES
         metrics.append(
             {
                 **_question_metadata(question),
                 "aggregated_value": totals[question.id],
+                "aggregation": "sum",
+                "aggregated_value_is_meaningful": not is_percent,
+                "superseded_by_derived_kpi": _SUPERSEDER.get(question.code),
                 "contributing_project_count": len(contributing),
                 "contributing_project_ids": sorted(contributing, key=str),
             }
@@ -261,6 +436,7 @@ def build_consolidation(
         },
         "projects": project_rows,
         "metrics": metrics,
+        "derived_kpis": _compute_derived_kpis(db, framework, per_project),
         "totals": {
             "projects_contributing": len(project_rows),
             "metrics_aggregated": len(metrics),
