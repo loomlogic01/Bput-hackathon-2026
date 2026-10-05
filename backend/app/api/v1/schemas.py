@@ -114,6 +114,10 @@ class SubmissionResponse(BaseModel):
     created_by_id: Optional[uuid.UUID] = None
     created_at: Any = None
     updated_at: Any = None
+    # Display name of the linked reporting period (e.g. "FY 2025-26"). Resolved
+    # from the submission the caller is ALREADY authorized to read, so it does
+    # not widen access to /projects/reporting-periods.
+    reporting_period_label: Optional[str] = None
 
 
 # ── Submission Values ──

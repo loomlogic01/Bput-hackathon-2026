@@ -15,6 +15,7 @@ import {
   listSubmissions,
 } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import ApproverSubmissionPage from './ApproverSubmissionPage'
 import NewSubmissionPage from './NewSubmissionPage'
 import ReviewerSubmissionPage from './ReviewerSubmissionPage'
 import SubmissionFormPage from './SubmissionFormPage'
@@ -67,6 +68,7 @@ export default function DashboardPage() {
   const [showNewSubmission, setShowNewSubmission] = useState(false)
   const [openSubmissionId, setOpenSubmissionId] = useState<string | null>(null)
   const [reviewSubmissionId, setReviewSubmissionId] = useState<string | null>(null)
+  const [approveSubmissionId, setApproveSubmissionId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -148,6 +150,11 @@ export default function DashboardPage() {
         <ReviewerSubmissionPage
           submissionId={reviewSubmissionId}
           onClose={() => setReviewSubmissionId(null)}
+        />
+      ) : approveSubmissionId !== null ? (
+        <ApproverSubmissionPage
+          submissionId={approveSubmissionId}
+          onClose={() => setApproveSubmissionId(null)}
         />
       ) : showNewSubmission ? (
         <NewSubmissionPage
@@ -310,6 +317,7 @@ export default function DashboardPage() {
                             onClick={() => {
                               setShowNewSubmission(false)
                               setReviewSubmissionId(null)
+                              setApproveSubmissionId(null)
                               setOpenSubmissionId(submission.id)
                             }}
                           >
@@ -321,10 +329,23 @@ export default function DashboardPage() {
                             onClick={() => {
                               setShowNewSubmission(false)
                               setOpenSubmissionId(null)
+                              setApproveSubmissionId(null)
                               setReviewSubmissionId(submission.id)
                             }}
                           >
                             Review
+                          </button>
+                          <button
+                            className="dash-rowaction"
+                            type="button"
+                            onClick={() => {
+                              setShowNewSubmission(false)
+                              setOpenSubmissionId(null)
+                              setReviewSubmissionId(null)
+                              setApproveSubmissionId(submission.id)
+                            }}
+                          >
+                            Approve
                           </button>
                         </div>
                       </td>

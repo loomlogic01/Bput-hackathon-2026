@@ -269,6 +269,12 @@ export interface Submission {
   created_by_id: string | null
   created_at: string | null
   updated_at: string | null
+  /**
+   * Display name of the linked reporting period (e.g. "FY 2025-26"), resolved
+   * server-side from this submission. Lets a read-only Approver show the period
+   * without access to /projects/reporting-periods. Null if unresolved.
+   */
+  reporting_period_label: string | null
 }
 
 /** GET /submissions/ - submissions within the caller's scope. */
@@ -468,6 +474,42 @@ export function requestCorrection(
   return request<SubmissionWorkflowResponse>(
     `/submissions/${submissionId}/request-correction`,
     { method: 'POST', body: { comments }, token },
+  )
+}
+
+/**
+ * POST /submissions/{id}/approve - UNDER_REVIEW|RESUBMITTED -> APPROVED.
+ *
+ * Requires `submission:approve`. The request body is REQUIRED by the backend:
+ * a bodiless POST returns 422, not 400. `comments` is optional, so an absent
+ * comment is sent as an explicit null rather than by omitting the key.
+ */
+export function approveSubmission(
+  submissionId: string,
+  comments?: string,
+  token?: string,
+): Promise<SubmissionWorkflowResponse> {
+  return request<SubmissionWorkflowResponse>(
+    `/submissions/${submissionId}/approve`,
+    { method: 'POST', body: { comments: comments ?? null }, token },
+  )
+}
+
+/**
+ * POST /submissions/{id}/lock - APPROVED -> LOCKED.
+ *
+ * Requires `submission:approve`. Like /approve the body is mandatory and
+ * `comments` is optional, so it is always sent as an explicit null when absent.
+ * LOCKED is terminal - the backend has no transition out of it.
+ */
+export function lockSubmission(
+  submissionId: string,
+  comments?: string,
+  token?: string,
+): Promise<SubmissionWorkflowResponse> {
+  return request<SubmissionWorkflowResponse>(
+    `/submissions/${submissionId}/lock`,
+    { method: 'POST', body: { comments: comments ?? null }, token },
   )
 }
 

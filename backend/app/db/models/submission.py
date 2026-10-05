@@ -76,6 +76,18 @@ class Submission(Base, UUIDMixin, TimestampMixin):
     framework: Mapped["BRSRFramework"] = relationship("BRSRFramework")
     created_by: Mapped[Optional["User"]] = relationship("User")
 
+    @property
+    def reporting_period_label(self) -> Optional[str]:
+        """Display name of the linked reporting period, e.g. "FY 2025-26".
+
+        A read-only convenience for API responses: a caller authorized to read
+        this submission may see which period it covers, without needing access
+        to the /projects/reporting-periods collection (which stays gated).
+        Not a mapped column - no schema change.
+        """
+        period = self.reporting_period
+        return period.fiscal_year if period is not None else None
+
     values: Mapped[List["SubmissionValue"]] = relationship(
         "SubmissionValue", back_populates="submission", cascade="all, delete-orphan"
     )

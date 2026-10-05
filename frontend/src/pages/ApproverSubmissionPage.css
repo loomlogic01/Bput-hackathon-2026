@@ -1,0 +1,381 @@
+/*
+ * Approver view - deliberately mirrors the Reviewer view's read-only
+ * presentation so the two roles look consistent, with an `avp-` prefix so the
+ * rules cannot leak into the other pages.
+ */
+
+.avp {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 4rem;
+  color: #111827;
+}
+
+.avp-alert {
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.84rem;
+}
+
+.avp-ok {
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.84rem;
+}
+
+.avp-empty {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ── Header ── */
+
+.avp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.avp-title {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.avp-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.avp-ghost {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.avp-ghost:hover {
+  background: #f9fafb;
+}
+
+/* ── Summary ── */
+
+.avp-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e2e6ea;
+  border-radius: 8px;
+}
+
+.avp-status {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.avp-status--approved {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.avp-status--locked {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.avp-status--under_review,
+.avp-status--resubmitted {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.avp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.avp-facts dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+
+.avp-facts dd {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #374151;
+}
+
+/* ── Actions ── */
+
+.avp-actions {
+  padding: 0.85rem;
+  margin-bottom: 1.1rem;
+  border: 1px solid #e2e6ea;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.avp-actions-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.92rem;
+}
+
+.avp-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  color: #374151;
+}
+
+.avp-textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.84rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.avp-textarea:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 1px;
+}
+
+.avp-primary,
+.avp-lock {
+  margin-top: 0.6rem;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: #047857;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.avp-lock {
+  background: #374151;
+}
+
+.avp-primary:hover:not(:disabled),
+.avp-lock:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.avp-primary:disabled,
+.avp-lock:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Workflow history ── */
+
+.avp-workflow {
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e6ea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.avp-wf {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.avp-wf-row {
+  margin-bottom: 0.3rem;
+  font-size: 0.82rem;
+}
+
+.avp-wf-transition {
+  font-weight: 600;
+  color: #111827;
+}
+
+.avp-wf-meta {
+  margin-left: 0.5rem;
+  color: #6b7280;
+}
+
+/* ── Sections / indicators ── */
+
+.avp-body {
+  margin-top: 0.6rem;
+}
+
+.avp-section {
+  margin-bottom: 1.5rem;
+}
+
+.avp-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.avp-section-head {
+  margin: 0 0 0.5rem;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+.avp-principle {
+  margin-bottom: 1rem;
+}
+
+.avp-principle-title {
+  margin: 0.4rem 0 0.5rem;
+  font-size: 0.84rem;
+  color: #374151;
+}
+
+.avp-indicator {
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.7rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.avp-indicator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.avp-indicator-title {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.avp-indicator-code {
+  margin: 0.15rem 0 0.5rem;
+  font-size: 0.72rem;
+  color: #9ca3af;
+}
+
+.avp-tag {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.avp-tag--ess {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.avp-tag--lead {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.avp-question {
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.avp-q-label {
+  margin: 0 0 0.2rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.avp-q-code {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.avp-q-text {
+  font-size: 0.84rem;
+  color: #111827;
+}
+
+.avp-req {
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.avp-answer {
+  margin: 0.15rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  background: #f9fafb;
+  font-size: 0.84rem;
+  color: #374151;
+  word-break: break-word;
+}
+
+.avp-answer--empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Evidence ── */
+
+.avp-ev {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.avp-ev-item {
+  margin-bottom: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.avp-ev-name {
+  font-weight: 600;
+}
+
+.avp-ev-meta,
+.avp-ev-desc {
+  color: #6b7280;
+}
