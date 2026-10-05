@@ -120,6 +120,83 @@ class SubmissionResponse(BaseModel):
     reporting_period_label: Optional[str] = None
 
 
+# ── Reporting & consolidation ──
+
+class ConsolidationPeriodSummary(BaseModel):
+    id: uuid.UUID
+    fiscal_year: str
+    start_date: date
+    end_date: date
+    boundary: Optional[str] = None
+
+
+class ConsolidationFrameworkSummary(BaseModel):
+    id: uuid.UUID
+    name: str
+    version: str
+
+
+class ConsolidationProject(BaseModel):
+    """One contributing project with its full organisation chain."""
+    organization_id: Optional[uuid.UUID] = None
+    organization_name: Optional[str] = None
+    organization_code: Optional[str] = None
+    entity_id: Optional[uuid.UUID] = None
+    entity_name: Optional[str] = None
+    entity_code: Optional[str] = None
+    business_unit_id: Optional[uuid.UUID] = None
+    business_unit_name: Optional[str] = None
+    business_unit_code: Optional[str] = None
+    project_id: uuid.UUID
+    project_name: str
+    project_code: Optional[str] = None
+    # Which submission was chosen as canonical for this project.
+    submission_id: uuid.UUID
+    submission_status: str
+
+
+class ConsolidationMetric(BaseModel):
+    """One NUMBER question aggregated across the contributing projects.
+
+    Only questions of type NUMBER are ever present. Two questions are never
+    merged, even if their unit_of_measurement strings match.
+    """
+    question_id: uuid.UUID
+    question_code: str
+    question_text: str
+    unit_of_measurement: Optional[str] = None
+    is_mandatory: bool
+    section_code: Optional[str] = None
+    section_title: Optional[str] = None
+    indicator_code: Optional[str] = None
+    indicator_title: Optional[str] = None
+    indicator_type: Optional[str] = None
+    # None for Section A/B indicators, which sit outside the NGRBC principles.
+    principle_code: Optional[str] = None
+    principle_title: Optional[str] = None
+    aggregated_value: float
+    contributing_project_count: int
+    contributing_project_ids: List[uuid.UUID] = []
+
+
+class ConsolidationTotals(BaseModel):
+    projects_contributing: int
+    metrics_aggregated: int
+
+
+class ConsolidationResponse(BaseModel):
+    """Request-time aggregate of approved/locked submissions.
+
+    An empty dataset is a valid 200 with empty ``projects``/``metrics`` lists,
+    never an error.
+    """
+    reporting_period: ConsolidationPeriodSummary
+    framework: ConsolidationFrameworkSummary
+    projects: List[ConsolidationProject] = []
+    metrics: List[ConsolidationMetric] = []
+    totals: ConsolidationTotals
+
+
 # ── Submission Values ──
 
 class SubmissionValueCreateRequest(BaseModel):
