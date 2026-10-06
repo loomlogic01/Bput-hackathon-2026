@@ -32,6 +32,7 @@ from backend.app.core.config import settings
 from backend.app.db.database import get_db
 from backend.app.db.models.submission import Evidence, SubmissionValue
 from backend.app.db.models.user import User
+from backend.app.services.audit import create_audit_log
 
 router = APIRouter()
 
@@ -181,4 +182,16 @@ def upload_submission_evidence(
     db.add(row)
     db.commit()
     db.refresh(row)
+    create_audit_log(
+        db=db,
+        user=current_user,
+        action="EVIDENCE_UPLOADED",
+        entity_type="Evidence",
+        entity_id=row.id,
+        description=f"Uploaded evidence file '{row.file_name}' for submission {submission_id}",
+        new_value={
+            "file_name": row.file_name,
+            "file_size_bytes": row.file_size_bytes,
+        },
+    )
     return row

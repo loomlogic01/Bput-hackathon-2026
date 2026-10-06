@@ -44,6 +44,7 @@ from backend.app.db.models.submission import (
     SubmissionValue,
 )
 from backend.app.db.models.user import User
+from backend.app.services.audit import create_audit_log
 
 router = APIRouter()
 
@@ -231,6 +232,10 @@ def upsert_submission_value(
     )
 
     if existing:
+        old_val = {
+            "value_numeric": existing.value_numeric,
+            "value_text": existing.value_text,
+        }
         existing.value_text = payload.value_text
         existing.value_numeric = payload.value_numeric
         existing.value_json = payload.value_json
@@ -239,6 +244,19 @@ def upsert_submission_value(
         existing.source_department = payload.source_department
         db.commit()
         db.refresh(existing)
+        create_audit_log(
+            db=db,
+            user=current_user,
+            action="VALUE_UPDATED",
+            entity_type="SubmissionValue",
+            entity_id=existing.id,
+            description=f"Updated answer for question {payload.question_id} on submission {submission_id}",
+            old_value=old_val,
+            new_value={
+                "value_numeric": payload.value_numeric,
+                "value_text": payload.value_text,
+            },
+        )
         return existing
 
     value = SubmissionValue(
@@ -254,6 +272,18 @@ def upsert_submission_value(
     db.add(value)
     db.commit()
     db.refresh(value)
+    create_audit_log(
+        db=db,
+        user=current_user,
+        action="VALUE_UPDATED",
+        entity_type="SubmissionValue",
+        entity_id=value.id,
+        description=f"Created answer for question {payload.question_id} on submission {submission_id}",
+        new_value={
+            "value_numeric": payload.value_numeric,
+            "value_text": payload.value_text,
+        },
+    )
     return value
 
 

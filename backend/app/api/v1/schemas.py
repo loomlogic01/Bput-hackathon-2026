@@ -307,3 +307,21 @@ class SubmissionWorkflowResponse(BaseModel):
     action_by_id: Optional[uuid.UUID] = None
     comments: Optional[str] = None
     created_at: Any = None
+
+
+# ── Audit Log ──
+
+class AuditLogResponse(BaseModel):
+    """An AuditLog record detailing system actions."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
+    action: str
+    entity_type: str
+    entity_id: Optional[uuid.UUID] = None
+    description: Optional[str] = None
+    old_value: Optional[dict] = None
+    new_value: Optional[dict] = None
+    ip_address: Optional[str] = None
+    created_at: Any = None

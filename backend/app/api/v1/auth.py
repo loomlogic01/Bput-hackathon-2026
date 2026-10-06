@@ -13,6 +13,7 @@ from backend.app.api.deps import get_current_user
 from backend.app.core.security import create_access_token, verify_password
 from backend.app.db.database import get_db
 from backend.app.db.models.user import User
+from backend.app.services.audit import create_audit_log
 
 router = APIRouter()
 
@@ -60,6 +61,15 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
+
+    create_audit_log(
+        db=db,
+        user=user,
+        action="USER_LOGIN",
+        entity_type="User",
+        entity_id=user.id,
+        description=f"User {user.email} logged in successfully",
+    )
 
     access_token = create_access_token(subject=user.id)
     return TokenResponse(access_token=access_token, token_type="bearer")

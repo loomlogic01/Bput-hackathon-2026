@@ -1,11 +1,12 @@
 import { useState } from 'react'
 
 import { AuthProvider, useAuth } from './auth/AuthContext'
+import AuditLogPage from './pages/AuditLogPage'
 import ConsolidationPage from './pages/ConsolidationPage'
 import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
 
-type Page = 'dashboard' | 'consolidation'
+type Page = 'dashboard' | 'consolidation' | 'audit'
 
 function App() {
   const { isAuthenticated, isInitialising } = useAuth()
@@ -26,6 +27,10 @@ function App() {
 
   if (page === 'consolidation') {
     return <ConsolidationPage onBack={() => setPage('dashboard')} />
+  }
+
+  if (page === 'audit') {
+    return <AuditLogPage onBack={() => setPage('dashboard')} />
   }
 
   return <DashboardPage onNavigate={(p: Page) => setPage(p)} />

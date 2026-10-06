@@ -667,3 +667,31 @@ export function getConsolidation(
   const path = `/reporting/consolidation?reporting_period_id=${reportingPeriodId}&framework_id=${frameworkId}`;
   return request<ConsolidationResponse>(path, { token });
 }
+
+// ── Audit Log endpoint ──
+
+export interface AuditLog {
+  id: string
+  user_id: string | null
+  action: string
+  entity_type: string
+  entity_id: string | null
+  description: string | null
+  old_value: Record<string, any> | null
+  new_value: Record<string, any> | null
+  ip_address: string | null
+  created_at: string
+}
+
+/** GET /audit-logs */
+export function listAuditLogs(
+  token: string,
+  params?: { limit?: number; action?: string; entity_type?: string },
+): Promise<AuditLog[]> {
+  const query = new URLSearchParams()
+  if (params?.limit) query.set('limit', String(params.limit))
+  if (params?.action) query.set('action', params.action)
+  if (params?.entity_type) query.set('entity_type', params.entity_type)
+  const queryString = query.toString()
+  return request<AuditLog[]>(`/audit-logs${queryString ? `?${queryString}` : ''}`, { token })
+}
