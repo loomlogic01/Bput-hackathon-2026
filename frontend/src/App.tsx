@@ -1,9 +1,15 @@
+import { useState } from 'react'
+
 import { AuthProvider, useAuth } from './auth/AuthContext'
+import ConsolidationPage from './pages/ConsolidationPage'
 import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
 
+type Page = 'dashboard' | 'consolidation'
+
 function App() {
   const { isAuthenticated, isInitialising } = useAuth()
+  const [page, setPage] = useState<Page>('dashboard')
 
   // Hold back both pages until a token left in sessionStorage has been
   // verified, otherwise a refresh flashes the login form before the restored
@@ -16,7 +22,13 @@ function App() {
     )
   }
 
-  return isAuthenticated ? <DashboardPage /> : <LoginPage />
+  if (!isAuthenticated) return <LoginPage />
+
+  if (page === 'consolidation') {
+    return <ConsolidationPage onBack={() => setPage('dashboard')} />
+  }
+
+  return <DashboardPage onNavigate={(p: Page) => setPage(p)} />
 }
 
 export default function Root() {

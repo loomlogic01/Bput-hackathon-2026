@@ -1,0 +1,159 @@
+/* ── ConsolidationPage — shares dash-* base styles from DashboardPage.css ── */
+
+/* ── Selectors row ── */
+
+.con-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+}
+
+.con-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 14rem;
+}
+
+.con-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.con-select {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 0.87rem;
+  color: #111827;
+  cursor: pointer;
+}
+
+.con-select:focus {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+/* ── Derived KPI hero card ── */
+
+.con-kpi-hero {
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  border-radius: 12px;
+  color: #ffffff;
+}
+
+.con-kpi-hero-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 0.5rem;
+}
+
+.con-kpi-hero-label {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.con-kpi-hero-value {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.con-kpi-hero-unit {
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin-left: 0.2rem;
+  opacity: 0.8;
+}
+
+.con-kpi-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.con-kpi-hero-null {
+  font-size: 1.4rem;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ── Warning badge for non-meaningful aggregations ── */
+
+.con-warn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 5px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.con-warn-row td {
+  background: #fffbf5;
+}
+
+/* ── Page body container ── */
+
+.con-body {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 3rem;
+}
+
+/* ── Page title ── */
+
+.con-page-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Hint when no selections made ── */
+
+.con-hint {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #9ca3af;
+  background: #fafbfb;
+  border: 1px dashed #dfe3e6;
+  border-radius: 10px;
+}
+
+@media (max-width: 640px) {
+  .con-body {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  .con-kpi-hero-value {
+    font-size: 2.2rem;
+  }
+}
+

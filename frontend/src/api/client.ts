@@ -620,3 +620,50 @@ export function login(credentials: LoginRequest): Promise<LoginResponse> {
 export function getCurrentUser(token: string): Promise<CurrentUser> {
   return request<CurrentUser>('/auth/me', { token })
 }
+
+// ── Consolidation endpoint ──
+
+/** Types for the consolidation API response */
+export interface ConsolidatedMetric {
+  question_code: string;
+  question: string;
+  aggregated_value: number;
+  unit_of_measurement: string;
+  contributing_project_count: number;
+  aggregation: string;
+  aggregated_value_is_meaningful: boolean;
+}
+
+export interface ConsolidatedDerivedKPI {
+  code: string;
+  label: string;
+  unit: string;
+  calculation_method: string;
+  source_question_codes: string[];
+  value: number | null;
+  contributing_project_count: number;
+}
+
+export interface ConsolidationTotals {
+  projects_contributing: number;
+  metrics_aggregated: number;
+}
+
+export interface ConsolidationResponse {
+  reporting_period: any; // could be refined with a dedicated interface
+  framework: any;
+  projects: any[];
+  metrics: ConsolidatedMetric[];
+  derived_kpis: ConsolidatedDerivedKPI[];
+  totals: ConsolidationTotals;
+}
+
+/** GET /reporting/consolidation?reporting_period_id=<id>&framework_id=<id> */
+export function getConsolidation(
+  reportingPeriodId: string,
+  frameworkId: string,
+  token?: string,
+): Promise<ConsolidationResponse> {
+  const path = `/reporting/consolidation?reporting_period_id=${reportingPeriodId}&framework_id=${frameworkId}`;
+  return request<ConsolidationResponse>(path, { token });
+}

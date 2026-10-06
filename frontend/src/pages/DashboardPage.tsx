@@ -59,7 +59,11 @@ function formatDate(value: string | null): string {
   })
 }
 
-export default function DashboardPage() {
+export default function DashboardPage({
+  onNavigate,
+}: {
+  onNavigate?: (page: 'consolidation') => void
+}) {
   const { user, token, logout } = useAuth()
 
   const [data, setData] = useState<DashboardData | null>(null)
@@ -135,6 +139,16 @@ export default function DashboardPage() {
           >
             New Submission
           </button>
+          {onNavigate && (
+            <button
+              className="dash-primary"
+              type="button"
+              onClick={() => onNavigate('consolidation')}
+              style={{ background: '#1d4ed8', borderColor: '#1d4ed8' }}
+            >
+              ESG Consolidation
+            </button>
+          )}
           <button className="dash-signout" type="button" onClick={logout}>
             Sign out
           </button>
