@@ -24,5 +24,8 @@ PyJWT==2.15.1
 passlib==1.7.4
 bcrypt==4.0.1
 
+# ── PDF report generation ──
+reportlab==4.4.0
+
 # ── Testing (used by scratch/test_auth.py and the TestClient) ──
 httpx==0.28.1

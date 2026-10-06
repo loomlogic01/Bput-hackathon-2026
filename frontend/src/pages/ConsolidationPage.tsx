@@ -38,6 +38,10 @@ export default function ConsolidationPage({ onBack }: Props) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // ── PDF download ──
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+
   // Load selectors once on mount
   useEffect(() => {
     if (!token) return
@@ -97,6 +101,38 @@ export default function ConsolidationPage({ onBack }: Props) {
     }
   }, [periodId, frameworkId, token])
 
+  const handleDownloadPdf = async () => {
+    if (!periodId || !frameworkId || !token) return
+    setPdfLoading(true)
+    setPdfError(null)
+    try {
+      const res = await fetch(
+        `/api/v1/reporting/consolidation/pdf?reporting_period_id=${periodId}&framework_id=${frameworkId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+      if (!res.ok) {
+        throw new Error(`Failed to download PDF (status ${res.status})`)
+      }
+      const blob = await res.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = `consolidation_${selectedPeriod?.fiscal_year.replace('/', '-') || periodId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : 'Error downloading PDF')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   const selectedPeriod = periods.find((p) => p.id === periodId)
   const selectedFramework = frameworks.find((f) => f.id === frameworkId)
 
@@ -128,7 +164,24 @@ export default function ConsolidationPage({ onBack }: Props) {
       </header>
 
       <div className="con-body">
-        <h2 className="con-page-title">ESG Consolidation</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 className="con-page-title" style={{ margin: 0 }}>ESG Consolidation</h2>
+          {result && (
+            <button
+              className="dash-primary"
+              type="button"
+              disabled={pdfLoading}
+              onClick={handleDownloadPdf}
+            >
+              {pdfLoading ? 'Generating PDF…' : '📄 Download PDF'}
+            </button>
+          )}
+        </div>
+        {pdfError && (
+          <div className="dash-alert" role="alert" style={{ marginBottom: '1rem' }}>
+            <span>{pdfError}</span>
+          </div>
+        )}
 
         {/* ── Selectors ── */}
         <div className="con-selectors">
