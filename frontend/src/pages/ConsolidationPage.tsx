@@ -7,6 +7,7 @@ import type {
   ReportingPeriod,
 } from '../api/client'
 import {
+  API_BASE_URL,
   ApiError,
   getConsolidation,
   listFrameworks,
@@ -107,7 +108,7 @@ export default function ConsolidationPage({ onBack }: Props) {
     setPdfError(null)
     try {
       const res = await fetch(
-        `/api/v1/reporting/consolidation/pdf?reporting_period_id=${periodId}&framework_id=${frameworkId}`,
+        `${API_BASE_URL}/reporting/consolidation/pdf?reporting_period_id=${periodId}&framework_id=${frameworkId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

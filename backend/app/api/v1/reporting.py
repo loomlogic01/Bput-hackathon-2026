@@ -85,9 +85,10 @@ def get_consolidation_pdf(
         raise HTTPException(status_code=404, detail="Framework not found")
 
     scope = accessible_project_ids(db, current_user)
-    consolidation_data: ConsolidationResponse = build_consolidation(
+    raw_data = build_consolidation(
         db, reporting_period, framework, scope
     )
+    consolidation_data = ConsolidationResponse.model_validate(raw_data)
 
     pdf_bytes = generate_consolidation_pdf(consolidation_data)
 
