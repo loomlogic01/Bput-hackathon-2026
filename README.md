@@ -262,7 +262,7 @@ In another terminal:
 ```powershell
 cd frontend
 npm install
-npm run dev
+npm.cmd run dev
 ```
 
 Frontend:
