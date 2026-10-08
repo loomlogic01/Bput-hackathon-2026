@@ -1,4 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowLeft,
+  Save,
+  Upload,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  Lock,
+  Send,
+  Paperclip,
+  Check,
+  Clock,
+} from 'lucide-react'
 
 import type {
   BrsrFrameworkDetail,
@@ -480,7 +493,8 @@ export default function SubmissionFormPage({
           {error ?? 'Submission not found.'}
         </div>
         <button className="sfp-ghost" type="button" onClick={onClose}>
-          Back to dashboard
+          <ArrowLeft size={15} />
+          <span>Back to dashboard</span>
         </button>
       </div>
     )
@@ -488,85 +502,138 @@ export default function SubmissionFormPage({
 
   const total = countQuestions(framework)
   const answered = Object.keys(form.values).length
+  const progressPct = total > 0 ? Math.round((answered / total) * 100) : 0
   /** True while any per-question answer save is still in flight. */
   const anySavePending = Object.values(form.saveState).some((s) => s === 'saving')
 
   return (
     <div className="sfp">
-      <header className="sfp-head">
-        <div>
-          <h2 className="sfp-title">{framework.name}</h2>
-          <p className="sfp-sub">
-            {framework.name} v{framework.version} · {submission.status} ·{' '}
-            {answered} of {total} answered
-          </p>
+      {/* Sticky Top Header with Progress Bar */}
+      <div className="sfp-sticky-header">
+        <header className="sfp-head">
+          <div className="sfp-head-main">
+            <button className="sfp-back-btn" type="button" onClick={onClose} title="Back to dashboard">
+              <ArrowLeft size={16} />
+              <span>Dashboard</span>
+            </button>
+            <div className="sfp-title-wrap">
+              <h2 className="sfp-title">{framework.name}</h2>
+              <div className="sfp-meta-tags">
+                <span className="sfp-version-badge">v{framework.version}</span>
+                <span className="dash-status-pill dash-status--progress">
+                  <span className="dash-status-dot" />
+                  <span>{submission.status.replace(/_/g, ' ')}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="sfp-head-actions">
+            {!readOnly && (
+              <button
+                className="sfp-submit-btn"
+                type="button"
+                disabled={submitOutcome.isSubmitting || anySavePending}
+                onClick={onSubmit}
+              >
+                {submitOutcome.isSubmitting ? (
+                  <>
+                    <span className="login-spinner" style={{ width: '14px', height: '14px' }} />
+                    <span>Submitting…</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    <span>
+                      {submission?.status === 'CORRECTION_REQUIRED'
+                        ? 'Resubmit for Review'
+                        : 'Submit for Review'}
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
+            <button className="sfp-close-btn" type="button" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </header>
+
+        {/* Progress Bar Track */}
+        <div className="sfp-progress-container">
+          <div className="sfp-progress-meta">
+            <span className="sfp-progress-label">Disclosure Completion</span>
+            <span className="sfp-progress-numbers">
+              <strong>{answered}</strong> of <strong>{total}</strong> questions answered ({progressPct}%)
+            </span>
+          </div>
+          <div className="sfp-progress-track">
+            <div
+              className="sfp-progress-fill"
+              style={{ width: `${progressPct}%` }}
+              role="progressbar"
+              aria-valuenow={progressPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
         </div>
-        <button className="sfp-ghost" type="button" onClick={onClose}>
-          Close
-        </button>
-      </header>
+      </div>
 
       {readOnly ? (
-        <div className="sfp-banner" role="note">
-          This submission is {submission.status.replace(/_/g, ' ').toLowerCase()}.
-          Answers are locked while it is out for review or approval, so the
-          controls below are read-only.
+        <div className="sfp-banner sfp-banner--readonly" role="note">
+          <Lock size={16} className="sfp-banner-icon" />
+          <div>
+            <strong>Read-Only Mode:</strong> This submission is {submission.status.replace(/_/g, ' ').toLowerCase()}.
+            Answers are locked while under review or approval.
+          </div>
         </div>
       ) : (
         <div className="sfp-banner sfp-banner--edit" role="note">
-          Answers save one question at a time. Only the question you press Save
-          on is sent — other edits stay on screen unsaved.
+          <Info size={16} className="sfp-banner-icon" />
+          <div>
+            <strong>Autonomy Notice:</strong> Answers save individually per question. Clicking <strong>Save answer</strong> records that specific question without affecting other unsaved fields on screen.
+          </div>
         </div>
       )}
 
-      {!readOnly && (
-        <div className="sfp-submit-bar">
-          <button
-            className="sfp-submit"
-            type="button"
-            disabled={submitOutcome.isSubmitting || anySavePending}
-            onClick={onSubmit}
-          >
-            {submitOutcome.isSubmitting
-              ? 'Submitting…'
-              : submission?.status === 'CORRECTION_REQUIRED'
-                ? 'Resubmit for Review'
-                : 'Submit for Review'}
-          </button>
-          {anySavePending && (
-            <span className="sfp-submit-hint">
-              Waiting for an answer to finish saving…
-            </span>
-          )}
+      {anySavePending && (
+        <div className="sfp-saving-banner" role="status">
+          <span className="login-spinner" style={{ width: '13px', height: '13px' }} />
+          <span>Synchronising response to backend server…</span>
         </div>
       )}
 
       {submitOutcome.succeeded && (
-        <p className="sfp-submit-ok" role="status">
-          {submitOutcome.message}
-        </p>
+        <div className="sfp-submit-ok" role="status">
+          <CheckCircle2 size={18} />
+          <span>{submitOutcome.message}</span>
+        </div>
       )}
 
       {submitOutcome.error && (
-        <p className="sfp-submit-err" role="alert">
-          {submitOutcome.error}
-        </p>
+        <div className="sfp-submit-err" role="alert">
+          <AlertTriangle size={18} />
+          <span>{submitOutcome.error}</span>
+        </div>
       )}
 
       {submitOutcome.missing.length > 0 && (
         <div className="sfp-missing" role="alert">
-          <p className="sfp-missing-head">
-            {submitOutcome.message}{' '}
-            <strong>
-              {submitOutcome.missing.length} mandatory question
-              {submitOutcome.missing.length === 1 ? '' : 's'} still unanswered.
-            </strong>
-          </p>
+          <div className="sfp-missing-header">
+            <AlertTriangle size={18} className="sfp-missing-alert-icon" />
+            <p className="sfp-missing-head">
+              {submitOutcome.message}{' '}
+              <strong>
+                {submitOutcome.missing.length} mandatory question
+                {submitOutcome.missing.length === 1 ? '' : 's'} unanswered.
+              </strong>
+            </p>
+          </div>
+          <p className="sfp-missing-subtext">Click any question below to jump directly to it:</p>
           <ul className="sfp-missing-list">
             {submitOutcome.missing.map((m) => (
               <li key={m.question_id} className="sfp-missing-item">
-                {/* One button per row, so the click never relies on bubbling
-                    from the nested code/text spans. */}
                 <button
                   className="sfp-missing-link"
                   type="button"
@@ -583,17 +650,21 @@ export default function SubmissionFormPage({
         </div>
       )}
 
-      <div className="sfp-filters" role="group" aria-label="Filter by classification">
-        {(['ALL', 'ESSENTIAL', 'LEADERSHIP'] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            className={f === filter ? 'sfp-chip sfp-chip--on' : 'sfp-chip'}
-            onClick={() => setFilter(f)}
-          >
-            {f === 'ALL' ? 'All' : f === 'ESSENTIAL' ? 'Essential' : 'Leadership'}
-          </button>
-        ))}
+      {/* Filter Tabs */}
+      <div className="sfp-filters-bar">
+        <span className="sfp-filters-label">Indicator Classification:</span>
+        <div className="sfp-filters" role="group" aria-label="Filter by classification">
+          {(['ALL', 'ESSENTIAL', 'LEADERSHIP'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={f === filter ? 'sfp-chip sfp-chip--on' : 'sfp-chip'}
+              onClick={() => setFilter(f)}
+            >
+              {f === 'ALL' ? 'All Questions' : f === 'ESSENTIAL' ? 'Essential Indicators' : 'Leadership Indicators'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {sections.map(({ section, loose, principles }) => {
@@ -610,9 +681,10 @@ export default function SubmissionFormPage({
         return (
           <section className="sfp-section" key={section.id}>
             <header className="sfp-section-head">
-              <h3 className="sfp-section-title">
-                {section.code} · {section.title}
-              </h3>
+              <div className="sfp-section-title-wrap">
+                <span className="sfp-section-badge">{section.code}</span>
+                <h3 className="sfp-section-title">{section.title}</h3>
+              </div>
               <span className="sfp-count">{sectionQuestions} questions</span>
             </header>
 
@@ -858,12 +930,22 @@ function QuestionRow({
           {question.unit_of_measurement && (
             <span className="sfp-q-unit">({question.unit_of_measurement})</span>
           )}
-          {question.is_mandatory && <span className="sfp-req">required</span>}
-          {answered && <span className="sfp-answered">Answered</span>}
+          {question.is_mandatory && <span className="sfp-req">Mandatory</span>}
+          {answered && (
+            <span className="sfp-answered">
+              <Check size={11} />
+              <span>Answered</span>
+            </span>
+          )}
         </label>
       </div>
 
-      {question.guidance && <p className="sfp-q-guidance">{question.guidance}</p>}
+      {question.guidance && (
+        <div className="sfp-q-guidance-box">
+          <Info size={14} className="sfp-guidance-icon" />
+          <p className="sfp-q-guidance">{question.guidance}</p>
+        </div>
+      )}
 
       <ResponseControl
         question={question}
@@ -873,15 +955,17 @@ function QuestionRow({
       />
 
       {error && (
-        <p className="sfp-q-error" role="alert">
-          {error}
-        </p>
+        <div className="sfp-q-error" role="alert">
+          <AlertTriangle size={14} />
+          <span>{error}</span>
+        </div>
       )}
 
       {state === 'saved' && !error && (
-        <p className="sfp-q-ok" role="status">
-          Saved
-        </p>
+        <div className="sfp-q-ok" role="status">
+          <CheckCircle2 size={14} />
+          <span>Answer saved successfully</span>
+        </div>
       )}
 
       {!readOnly && (
@@ -892,7 +976,17 @@ function QuestionRow({
             disabled={state === 'saving'}
             onClick={() => onSave(question)}
           >
-            {state === 'saving' ? 'Saving…' : 'Save answer'}
+            {state === 'saving' ? (
+              <>
+                <span className="login-spinner" style={{ width: '13px', height: '13px' }} />
+                <span>Saving…</span>
+              </>
+            ) : (
+              <>
+                <Save size={13} />
+                <span>Save answer</span>
+              </>
+            )}
           </button>
         </div>
       )}
@@ -954,31 +1048,39 @@ function EvidencePanel({
   return (
     <div className="sfp-ev">
       {items.length > 0 && (
-        <ul className="sfp-ev-list">
-          {items.map((e) => (
-            <li className="sfp-ev-item" key={e.id}>
-              <div className="sfp-ev-line">
-                <span className="sfp-ev-name">{e.file_name}</span>
-                <span className="sfp-ev-meta">
-                  {formatBytes(e.file_size_bytes)}
-                  {e.content_type ? ` · ${e.content_type}` : ''}
-                </span>
-              </div>
-              {e.description && <p className="sfp-ev-desc">{e.description}</p>}
-              {e.created_at && (
-                <p className="sfp-ev-date">
-                  Uploaded {formatDate(e.created_at)}
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="sfp-ev-list-wrap">
+          <span className="sfp-ev-section-title">
+            <Paperclip size={12} />
+            <span>Attached Documentation ({items.length})</span>
+          </span>
+          <ul className="sfp-ev-list">
+            {items.map((e) => (
+              <li className="sfp-ev-item" key={e.id}>
+                <div className="sfp-ev-line">
+                  <span className="sfp-ev-name">{e.file_name}</span>
+                  <span className="sfp-ev-meta">
+                    {formatBytes(e.file_size_bytes)}
+                    {e.content_type ? ` · ${e.content_type}` : ''}
+                  </span>
+                </div>
+                {e.description && <p className="sfp-ev-desc">{e.description}</p>}
+                {e.created_at && (
+                  <p className="sfp-ev-date">
+                    <Clock size={11} />
+                    <span>Uploaded {formatDate(e.created_at)}</span>
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {!readOnly && savedValueId && (
         <div className="sfp-ev-upload">
           <label className="sfp-ev-label" htmlFor={inputId}>
-            Evidence
+            <Upload size={12} />
+            <span>Upload Supporting Documentation / Evidence</span>
           </label>
           <div className="sfp-ev-controls">
             <input
@@ -991,7 +1093,7 @@ function EvidencePanel({
             <input
               className="sfp-ev-desc-input"
               type="text"
-              placeholder="Description (optional)"
+              placeholder="Document description (optional, e.g. Audit Certificate)"
               value={description}
               disabled={busy}
               onChange={(e) => setDescription(e.target.value)}
@@ -1002,24 +1104,36 @@ function EvidencePanel({
               disabled={!canUpload}
               onClick={submit}
             >
-              {busy ? 'Uploading…' : 'Upload Evidence'}
+              {busy ? (
+                <>
+                  <span className="login-spinner" style={{ width: '12px', height: '12px' }} />
+                  <span>Uploading…</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={13} />
+                  <span>Upload File</span>
+                </>
+              )}
             </button>
           </div>
           {state === 'saved' && !message && (
-            <p className="sfp-q-ok" role="status">
-              Evidence uploaded
-            </p>
+            <div className="sfp-q-ok" role="status">
+              <CheckCircle2 size={13} />
+              <span>Document uploaded and attached</span>
+            </div>
           )}
           {message && (
-            <p className="sfp-q-error" role="alert">
-              {message}
-            </p>
+            <div className="sfp-q-error" role="alert">
+              <AlertTriangle size={13} />
+              <span>{message}</span>
+            </div>
           )}
         </div>
       )}
 
       {!readOnly && !savedValueId && (
-        <p className="sfp-ev-note">Save the answer first to attach evidence.</p>
+        <p className="sfp-ev-note">Save an answer to this question first before attaching supporting evidence.</p>
       )}
     </div>
   )

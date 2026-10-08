@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import {
+  Building2,
+  Calendar,
+  ClipboardCheck,
+  BookOpen,
+  Plus,
+  BarChart3,
+  History,
+  LogOut,
+  Leaf,
+  FileEdit,
+  ShieldAlert,
+  MapPin,
+  RefreshCw,
+  Clock,
+  Layers,
+} from 'lucide-react'
 
 import type {
   BrsrFramework,
@@ -28,23 +45,25 @@ interface DashboardData {
   submissions: Submission[]
 }
 
-const MAX_RECENT = 5
+const MAX_RECENT = 8
 
-/** Map a submission status onto a badge modifier. */
-function statusClass(status: string): string {
+/** Map a submission status onto a badge modifier and dot. */
+function statusConfig(status: string): { className: string; label: string } {
   switch (status) {
     case 'APPROVED':
+      return { className: 'dash-status--done', label: 'Approved' }
     case 'LOCKED':
-      return 'dash-status--done'
+      return { className: 'dash-status--locked', label: 'Locked' }
     case 'CORRECTION_REQUIRED':
-      return 'dash-status--action'
+      return { className: 'dash-status--action', label: 'Correction Required' }
     case 'SUBMITTED':
+      return { className: 'dash-status--progress', label: 'Submitted' }
     case 'RESUBMITTED':
-      return 'dash-status--progress'
+      return { className: 'dash-status--progress', label: 'Resubmitted' }
     case 'UNDER_REVIEW':
-      return 'dash-status--review'
+      return { className: 'dash-status--review', label: 'Under Review' }
     default:
-      return 'dash-status--draft'
+      return { className: 'dash-status--draft', label: 'Draft' }
   }
 }
 
@@ -119,47 +138,76 @@ export default function DashboardPage({
   const periodLabel = (id: string): string =>
     data?.periods.find((p) => p.id === id)?.fiscal_year ?? '—'
 
+  const userInitial = user?.full_name ? user.full_name[0].toUpperCase() : 'U'
+
   return (
     <div className="dash">
       <header className="dash-topbar">
         <div className="dash-brand">
-          <span className="dash-brand-mark">SEBI</span>
+          <div className="dash-brand-mark">
+            <Leaf size={18} />
+          </div>
           <div className="dash-brand-text">
-            <p className="dash-brand-eyebrow">
-              Business Responsibility &amp; Sustainability
-            </p>
-            <p className="dash-brand-name">ESG Reporting Portal</p>
+            <span className="dash-brand-eyebrow">SEBI BRSR CORE</span>
+            <p className="dash-brand-name">ESG &amp; Sustainability Portal</p>
           </div>
         </div>
-        <div className="dash-topbar-actions">
-          <button
-            className="dash-primary"
-            type="button"
-            onClick={() => setShowNewSubmission(true)}
-          >
-            New Submission
+
+        {/* Global Navigation Tabs */}
+        <nav className="dash-nav-links" aria-label="Main Navigation">
+          <button className="dash-nav-link dash-nav-link--active" type="button">
+            <Layers size={15} />
+            <span>Dashboard</span>
           </button>
           {onNavigate && (
             <>
               <button
-                className="dash-primary"
+                className="dash-nav-link"
                 type="button"
                 onClick={() => onNavigate('consolidation')}
-                style={{ background: '#1d4ed8', borderColor: '#1d4ed8' }}
               >
-                ESG Consolidation
+                <BarChart3 size={15} />
+                <span>Consolidation</span>
               </button>
               <button
-                className="dash-secondary"
+                className="dash-nav-link"
                 type="button"
                 onClick={() => onNavigate('audit')}
               >
-                Audit Log
+                <History size={15} />
+                <span>Audit Log</span>
               </button>
             </>
           )}
-          <button className="dash-signout" type="button" onClick={logout}>
-            Sign out
+        </nav>
+
+        <div className="dash-topbar-actions">
+          <button
+            className="dash-primary-btn"
+            type="button"
+            onClick={() => setShowNewSubmission(true)}
+          >
+            <Plus size={16} />
+            <span>New Submission</span>
+          </button>
+
+          <div className="dash-user-pill">
+            <div className="dash-user-avatar" title={user?.email ?? undefined}>
+              {userInitial}
+            </div>
+            <div className="dash-user-info">
+              <span className="dash-user-name">{user?.full_name ?? 'User'}</span>
+            </div>
+          </div>
+
+          <button
+            className="dash-signout-btn"
+            type="button"
+            onClick={logout}
+            title="Sign out of your session"
+          >
+            <LogOut size={15} />
+            <span className="dash-signout-text">Sign out</span>
           </button>
         </div>
       </header>
@@ -187,201 +235,269 @@ export default function DashboardPage({
           onCancel={() => setShowNewSubmission(false)}
         />
       ) : (
-        <div className="dash-body">
-        <section className="dash-welcome">
-          <div className="dash-welcome-main">
-            <h2 className="dash-welcome-title">
-              Welcome back, {user?.full_name ?? 'there'}
-            </h2>
-            <p className="dash-welcome-sub">
-              Here is your current ESG reporting position.
-            </p>
-          </div>
-          <dl className="dash-identity">
-            <div className="dash-identity-item">
-              <dt>Email</dt>
-              <dd>{user?.email ?? '—'}</dd>
+        <main className="dash-body">
+          {/* Welcome Executive Banner */}
+          <section className="dash-welcome">
+            <div className="dash-welcome-main">
+              <div className="dash-welcome-tag">
+                <span className="dash-live-dot" />
+                <span>Regulatory Cycle 2026 Active</span>
+              </div>
+              <h2 className="dash-welcome-title">
+                Welcome back, {user?.full_name ?? 'Reporting Officer'}
+              </h2>
+              <p className="dash-welcome-sub">
+                Manage ESG indicators, monitor multi-facility disclosures, and prepare SEBI BRSR Core submissions.
+              </p>
             </div>
-            <div className="dash-identity-item">
-              <dt>Organisation</dt>
-              <dd title={user?.organization_id ?? undefined}>
-                {user?.organization_id ?? 'Not assigned'}
-              </dd>
+
+            <div className="dash-identity-cards">
+              <div className="dash-identity-card">
+                <span className="dash-identity-label">Account</span>
+                <span className="dash-identity-value">{user?.email ?? '—'}</span>
+              </div>
+              <div className="dash-identity-card">
+                <span className="dash-identity-label">Organisation ID</span>
+                <span className="dash-identity-value font-mono">
+                  {user?.organization_id ? user.organization_id.slice(0, 13) + '…' : 'General Node'}
+                </span>
+              </div>
             </div>
-          </dl>
-        </section>
+          </section>
 
-        {error && (
-          <div className="dash-alert" role="alert">
-            <span>{error}</span>
-            <button
-              className="dash-retry"
-              type="button"
-              onClick={() => void load()}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        <section className="dash-stats" aria-label="Summary">
-          <Stat label="Projects" value={data?.projects.length} loading={isLoading} />
-          <Stat
-            label="Reporting periods"
-            value={data?.periods.length}
-            loading={isLoading}
-          />
-          <Stat
-            label="Submissions"
-            value={data?.submissions.length}
-            loading={isLoading}
-          />
-          <Stat
-            label="BRSR frameworks"
-            value={data?.frameworks.length}
-            loading={isLoading}
-          />
-        </section>
-
-        <div className="dash-columns">
-          <Panel
-            title="BRSR Frameworks"
-            subtitle="Reporting standards available to your entity"
-            loading={isLoading}
-            errored={error !== null}
-          >
-            {data && data.frameworks.length > 0 ? (
-              <ul className="dash-list">
-                {data.frameworks.map((framework) => (
-                  <li className="dash-row" key={framework.id}>
-                    <div className="dash-row-head">
-                      <span className="dash-row-title">{framework.name}</span>
-                      <span className="dash-chip">v{framework.version}</span>
-                    </div>
-                    {framework.description && (
-                      <p className="dash-row-note">{framework.description}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <Empty />
-            )}
-          </Panel>
-
-          <Panel
-            title="Projects"
-            subtitle="Sites and facilities within your scope"
-            loading={isLoading}
-            errored={error !== null}
-          >
-            {data && data.projects.length > 0 ? (
-              <ul className="dash-list">
-                {data.projects.map((project) => (
-                  <li className="dash-row" key={project.id}>
-                    <div className="dash-row-head">
-                      <span className="dash-row-title">{project.name}</span>
-                      {project.code && (
-                        <span className="dash-chip dash-chip--plain">
-                          {project.code}
-                        </span>
-                      )}
-                    </div>
-                    {project.location && (
-                      <p className="dash-row-note">{project.location}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <Empty message="No projects in scope." />
-            )}
-          </Panel>
-        </div>
-
-        <Panel
-          title="Recent Submissions"
-          subtitle="Most recent disclosure submissions"
-          loading={isLoading}
-          errored={error !== null}
-        >
-          {recent.length > 0 ? (
-            <div className="dash-table-wrap">
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Status</th>
-                    <th scope="col">Project</th>
-                    <th scope="col">Reporting period</th>
-                    <th scope="col">Created</th>
-                    <th scope="col">
-                      <span className="dash-sr">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map((submission) => (
-                    <tr key={submission.id}>
-                      <td>
-                        <span
-                          className={`dash-status ${statusClass(submission.status)}`}
-                        >
-                          {submission.status.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td>{projectName(submission.project_id)}</td>
-                      <td>{periodLabel(submission.reporting_period_id)}</td>
-                      <td>{formatDate(submission.created_at)}</td>
-                      <td>
-                        <div className="dash-rowactions">
-                          <button
-                            className="dash-rowaction"
-                            type="button"
-                            onClick={() => {
-                              setShowNewSubmission(false)
-                              setReviewSubmissionId(null)
-                              setApproveSubmissionId(null)
-                              setOpenSubmissionId(submission.id)
-                            }}
-                          >
-                            Open form
-                          </button>
-                          <button
-                            className="dash-rowaction"
-                            type="button"
-                            onClick={() => {
-                              setShowNewSubmission(false)
-                              setOpenSubmissionId(null)
-                              setApproveSubmissionId(null)
-                              setReviewSubmissionId(submission.id)
-                            }}
-                          >
-                            Review
-                          </button>
-                          <button
-                            className="dash-rowaction"
-                            type="button"
-                            onClick={() => {
-                              setShowNewSubmission(false)
-                              setOpenSubmissionId(null)
-                              setReviewSubmissionId(null)
-                              setApproveSubmissionId(submission.id)
-                            }}
-                          >
-                            Approve
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {error && (
+            <div className="dash-alert" role="alert">
+              <div className="dash-alert-content">
+                <ShieldAlert size={18} />
+                <span>{error}</span>
+              </div>
+              <button
+                className="dash-retry"
+                type="button"
+                onClick={() => void load()}
+              >
+                <RefreshCw size={14} />
+                <span>Retry</span>
+              </button>
             </div>
-          ) : (
-            <Empty message="No submissions yet." />
           )}
-        </Panel>
-        </div>
+
+          {/* Metric Stats Cards */}
+          <section className="dash-stats" aria-label="Key Performance Statistics">
+            <Stat
+              label="Projects in Scope"
+              value={data?.projects.length}
+              caption="Reporting sites & facilities"
+              icon={<Building2 size={20} />}
+              loading={isLoading}
+              colorVariant="emerald"
+            />
+            <Stat
+              label="Reporting Periods"
+              value={data?.periods.length}
+              caption="Fiscal compliance timelines"
+              icon={<Calendar size={20} />}
+              loading={isLoading}
+              colorVariant="blue"
+            />
+            <Stat
+              label="Total Submissions"
+              value={data?.submissions.length}
+              caption="Filings in progress & approved"
+              icon={<ClipboardCheck size={20} />}
+              loading={isLoading}
+              colorVariant="teal"
+            />
+            <Stat
+              label="BRSR Frameworks"
+              value={data?.frameworks.length}
+              caption="Standards & indicator sets"
+              icon={<BookOpen size={20} />}
+              loading={isLoading}
+              colorVariant="slate"
+            />
+          </section>
+
+          {/* Dual Columns: Frameworks & Projects */}
+          <div className="dash-columns">
+            <Panel
+              title="BRSR Frameworks"
+              subtitle="SEBI National Standards & Disclosure Sets"
+              icon={<BookOpen size={17} />}
+              loading={isLoading}
+              errored={error !== null}
+            >
+              {data && data.frameworks.length > 0 ? (
+                <ul className="dash-list">
+                  {data.frameworks.map((framework) => (
+                    <li className="dash-card-item" key={framework.id}>
+                      <div className="dash-card-header">
+                        <div className="dash-card-title-group">
+                          <span className="dash-card-title">{framework.name}</span>
+                          <span className="dash-badge-version">v{framework.version}</span>
+                        </div>
+                        <span className="dash-tag-standard">SEBI Standard</span>
+                      </div>
+                      {framework.description && (
+                        <p className="dash-card-note">{framework.description}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Empty message="No BRSR frameworks configured yet." />
+              )}
+            </Panel>
+
+            <Panel
+              title="Registered Facilities & Projects"
+              subtitle="Sites currently contributing operational ESG metrics"
+              icon={<Building2 size={17} />}
+              loading={isLoading}
+              errored={error !== null}
+            >
+              {data && data.projects.length > 0 ? (
+                <ul className="dash-list">
+                  {data.projects.map((project) => (
+                    <li className="dash-card-item" key={project.id}>
+                      <div className="dash-card-header">
+                        <div className="dash-card-title-group">
+                          <span className="dash-card-title">{project.name}</span>
+                          {project.code && (
+                            <span className="dash-badge-code">{project.code}</span>
+                          )}
+                        </div>
+                      </div>
+                      {project.location ? (
+                        <p className="dash-card-location">
+                          <MapPin size={13} />
+                          <span>{project.location}</span>
+                        </p>
+                      ) : (
+                        <p className="dash-card-location muted">Location unspecified</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Empty message="No active projects within scope." />
+              )}
+            </Panel>
+          </div>
+
+          {/* Recent Submissions Table Panel */}
+          <Panel
+            title="Recent Disclosure Submissions"
+            subtitle="Filings across all projects and workflow phases"
+            icon={<ClipboardCheck size={18} />}
+            loading={isLoading}
+            errored={error !== null}
+            action={
+              <button
+                className="dash-link-action"
+                type="button"
+                onClick={() => setShowNewSubmission(true)}
+              >
+                <span>+ Create Filing</span>
+              </button>
+            }
+          >
+            {recent.length > 0 ? (
+              <div className="dash-table-wrap">
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Status</th>
+                      <th scope="col">Project / Site</th>
+                      <th scope="col">Reporting Period</th>
+                      <th scope="col">Filing Date</th>
+                      <th scope="col" className="text-right">Workflow Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.map((submission) => {
+                      const cfg = statusConfig(submission.status)
+                      return (
+                        <tr key={submission.id} className="dash-table-row">
+                          <td>
+                            <span className={`dash-status-pill ${cfg.className}`}>
+                              <span className="dash-status-dot" />
+                              <span>{cfg.label}</span>
+                            </span>
+                          </td>
+                          <td>
+                            <div className="dash-cell-project">
+                              <span className="dash-project-name">
+                                {projectName(submission.project_id)}
+                              </span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="dash-period-badge">
+                              {periodLabel(submission.reporting_period_id)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="dash-date-text">
+                              <Clock size={13} />
+                              {formatDate(submission.created_at)}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="dash-rowactions">
+                              <button
+                                className="dash-btn-action dash-btn-open"
+                                type="button"
+                                title="Open response entry form"
+                                onClick={() => {
+                                  setShowNewSubmission(false)
+                                  setReviewSubmissionId(null)
+                                  setApproveSubmissionId(null)
+                                  setOpenSubmissionId(submission.id)
+                                }}
+                              >
+                                <FileEdit size={13} />
+                                <span>Open form</span>
+                              </button>
+                              <button
+                                className="dash-btn-action dash-btn-review"
+                                type="button"
+                                title="Review responses & audit logs"
+                                onClick={() => {
+                                  setShowNewSubmission(false)
+                                  setOpenSubmissionId(null)
+                                  setApproveSubmissionId(null)
+                                  setReviewSubmissionId(submission.id)
+                                }}
+                              >
+                                <span>Review</span>
+                              </button>
+                              <button
+                                className="dash-btn-action dash-btn-approve"
+                                type="button"
+                                title="Approver sign-off"
+                                onClick={() => {
+                                  setShowNewSubmission(false)
+                                  setOpenSubmissionId(null)
+                                  setReviewSubmissionId(null)
+                                  setApproveSubmissionId(submission.id)
+                                }}
+                              >
+                                <span>Approve</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Empty message="No disclosure submissions filed yet. Click 'New Submission' above to get started." />
+            )}
+          </Panel>
+        </main>
       )}
     </div>
   )
@@ -390,18 +506,32 @@ export default function DashboardPage({
 function Stat({
   label,
   value,
+  caption,
+  icon,
   loading,
+  colorVariant,
 }: {
   label: string
   value: number | undefined
+  caption?: string
+  icon: ReactNode
   loading: boolean
+  colorVariant: 'emerald' | 'blue' | 'teal' | 'slate'
 }) {
   return (
-    <div className="dash-stat">
-      <span className="dash-stat-value">
-        {loading || value === undefined ? '—' : value}
-      </span>
-      <span className="dash-stat-label">{label}</span>
+    <div className={`dash-stat-card dash-stat-card--${colorVariant}`}>
+      <div className="dash-stat-top">
+        <span className="dash-stat-label">{label}</span>
+        <div className="dash-stat-icon-wrap">{icon}</div>
+      </div>
+      <div className="dash-stat-value">
+        {loading || value === undefined ? (
+          <span className="dash-stat-skeleton" />
+        ) : (
+          value
+        )}
+      </div>
+      {caption && <span className="dash-stat-caption">{caption}</span>}
     </div>
   )
 }
@@ -409,28 +539,51 @@ function Stat({
 function Panel({
   title,
   subtitle,
+  icon,
   loading,
   errored,
+  action,
   children,
 }: {
   title: string
   subtitle: string
+  icon?: ReactNode
   loading: boolean
   errored: boolean
+  action?: ReactNode
   children: ReactNode
 }) {
   return (
     <section className="dash-panel">
       <header className="dash-panel-head">
-        <h3 className="dash-panel-title">{title}</h3>
-        <p className="dash-panel-sub">{subtitle}</p>
+        <div className="dash-panel-title-group">
+          {icon && <div className="dash-panel-icon">{icon}</div>}
+          <div>
+            <h3 className="dash-panel-title">{title}</h3>
+            <p className="dash-panel-sub">{subtitle}</p>
+          </div>
+        </div>
+        {action && <div className="dash-panel-action">{action}</div>}
       </header>
-      {loading && <p className="dash-muted">Loading…</p>}
+      {loading && (
+        <div className="dash-panel-loading">
+          <div className="dash-panel-spinner" />
+          <span>Loading data…</span>
+        </div>
+      )}
       {!loading && !errored && children}
     </section>
   )
 }
 
 function Empty({ message = 'Nothing to show yet.' }: { message?: string }) {
-  return <p className="dash-empty">{message}</p>
+  return (
+    <div className="dash-empty">
+      <div className="dash-empty-icon">
+        <BookOpen size={28} />
+      </div>
+      <p className="dash-empty-text">{message}</p>
+    </div>
+  )
 }
+

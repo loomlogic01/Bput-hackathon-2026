@@ -12,6 +12,20 @@ import type {
   SubmissionWorkflowResponse,
 } from '../api/client'
 import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileText,
+  History,
+  Paperclip,
+  Send,
+} from 'lucide-react'
+import {
   ApiError,
   getFramework,
   getSubmission,
@@ -68,7 +82,7 @@ function answerText(q: BrsrQuestion, v: SubmissionValue | undefined): string {
     return v.value_numeric === null ? '' : String(v.value_numeric)
   }
   if (q.response_type === 'TABLE') {
-    if (v.value_json) return JSON.stringify(v.value_json)
+    if (v.value_json) return JSON.stringify(v.value_json, null, 2)
     return v.value_text ?? ''
   }
   return v.value_text ?? ''
@@ -146,7 +160,6 @@ export default function ReviewerSubmissionPage({
   async function runAction(action: 'review' | 'correction') {
     if (!token || !data || busy) return
     if (action === 'correction' && reason.trim() === '') {
-      // The backend rejects blank input with a 400; block it before sending.
       setReasonError('Enter a reason for the correction.')
       return
     }
@@ -175,7 +188,10 @@ export default function ReviewerSubmissionPage({
   if (isLoading) {
     return (
       <div className="rvp">
-        <p className="rvp-loading">Loading submission…</p>
+        <div className="rvp-loading">
+          <div className="rvp-spinner" />
+          <p>Loading submission for review…</p>
+        </div>
       </div>
     )
   }
@@ -184,10 +200,11 @@ export default function ReviewerSubmissionPage({
     return (
       <div className="rvp">
         <div className="rvp-alert" role="alert">
-          {error ?? 'Submission not found.'}
+          <AlertCircle size={18} />
+          <span>{error ?? 'Submission not found.'}</span>
         </div>
         <button className="rvp-ghost" type="button" onClick={onClose}>
-          Back to dashboard
+          <ArrowLeft size={16} /> Back to dashboard
         </button>
       </div>
     )
@@ -199,153 +216,197 @@ export default function ReviewerSubmissionPage({
   const period = periods.find((p) => p.id === submission.reporting_period_id)
   const canReview = REVIEWABLE.has(submission.status)
   const canCorrect = submission.status === 'UNDER_REVIEW'
-  // REVIEWER holds only submission:read + submission:review, so there is
-  // deliberately no Approve control anywhere in this view.
 
   return (
     <div className="rvp">
+      {/* Header bar */}
       <header className="rvp-head">
         <div>
-          <h2 className="rvp-title">{framework.name}</h2>
+          <button className="rvp-back-btn" type="button" onClick={onClose}>
+            <ArrowLeft size={16} /> Back to Dashboard
+          </button>
+          <div className="rvp-title-wrap">
+            <h2 className="rvp-title">{framework.name}</h2>
+            <span className="rvp-version-badge">v{framework.version}</span>
+            <span className="rvp-mode-pill">
+              <Eye size={13} /> Reviewer Mode
+            </span>
+          </div>
           <p className="rvp-sub">
-            v{framework.version} · read-only review view
+            Review disclosures and supporting evidence. Changes are recorded in the audit trail.
           </p>
         </div>
-        <button className="rvp-ghost" type="button" onClick={onClose}>
-          Close
-        </button>
       </header>
 
-      <section className="rvp-summary">
-        <span className={`rvp-status rvp-status--${submission.status.toLowerCase()}`}>
-          {submission.status.replace(/_/g, ' ')}
-        </span>
-        <dl className="rvp-facts">
-          <div>
-            <dt>Project</dt>
-            <dd>
+      {/* Overview Metadata Card */}
+      <section className="rvp-summary-card">
+        <div className="rvp-summary-main">
+          <div className="rvp-summary-item">
+            <span className="rvp-item-label">
+              <Building2 size={13} /> Project
+            </span>
+            <span className="rvp-item-val">
               {project
                 ? `${project.name}${project.code ? ` (${project.code})` : ''}`
                 : submission.project_id}
-            </dd>
+            </span>
           </div>
-          <div>
-            <dt>Reporting period</dt>
-            <dd>
+          <div className="rvp-summary-item">
+            <span className="rvp-item-label">
+              <Calendar size={13} /> Reporting Period
+            </span>
+            <span className="rvp-item-val">
               {period ? period.fiscal_year : submission.reporting_period_id}
-            </dd>
+            </span>
           </div>
-          <div>
-            <dt>Framework</dt>
-            <dd>
-              {framework.name} v{framework.version}
-            </dd>
+          <div className="rvp-summary-item">
+            <span className="rvp-item-label">
+              <FileText size={13} /> Framework
+            </span>
+            <span className="rvp-item-val">{framework.name}</span>
           </div>
-        </dl>
+        </div>
+        <div className="rvp-summary-status">
+          <span className="rvp-item-label">Current Status</span>
+          <span className={`rvp-status rvp-status--${submission.status.toLowerCase()}`}>
+            <span className="rvp-status-dot" />
+            {submission.status.replace(/_/g, ' ')}
+          </span>
+        </div>
       </section>
 
+      {/* Notifications */}
       {notice && (
-        <p className="rvp-ok" role="status">
-          {notice}
-        </p>
+        <div className="rvp-ok" role="status">
+          <CheckCircle2 size={18} />
+          <span>{notice}</span>
+        </div>
       )}
       {actionError && (
-        <p className="rvp-alert" role="alert">
-          {actionError}
-        </p>
+        <div className="rvp-alert" role="alert">
+          <AlertCircle size={18} />
+          <span>{actionError}</span>
+        </div>
       )}
 
+      {/* Action Decision Area */}
       {(canReview || canCorrect) && (
-        <div className="rvp-actions">
-          {canReview && (
-            <button
-              className="rvp-action"
-              type="button"
-              disabled={busy}
-              onClick={() => runAction('review')}
-            >
-              {busy ? 'Working…' : 'Start Review'}
-            </button>
-          )}
-          {canCorrect && !showReason && (
-            <button
-              className="rvp-action rvp-action--warn"
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setShowReason(true)
-                setReasonError(null)
-              }}
-            >
-              Request Correction
-            </button>
-          )}
-        </div>
-      )}
-
-      {canCorrect && showReason && (
-        <div className="rvp-reason">
-          <label className="rvp-reason-label" htmlFor="rvp-reason">
-            Reason for correction <span className="rvp-req">required</span>
-          </label>
-          <textarea
-            className="rvp-reason-input"
-            id="rvp-reason"
-            rows={3}
-            value={reason}
-            disabled={busy}
-            placeholder="Describe what must be corrected"
-            onChange={(e) => {
-              setReason(e.target.value)
-              if (reasonError) setReasonError(null)
-            }}
-          />
-          {reasonError && (
-            <p className="rvp-reason-err" role="alert">
-              {reasonError}
+        <div className="rvp-actions-card">
+          <div className="rvp-actions-header">
+            <h3 className="rvp-actions-title">Review Actions</h3>
+            <p className="rvp-actions-desc">
+              {canReview && 'This filing has been submitted and is ready for formal review.'}
+              {canCorrect && 'This filing is under review. You may request corrections if updates are needed.'}
             </p>
-          )}
-          <div className="rvp-reason-actions">
-            <button
-              className="rvp-action rvp-action--warn"
-              type="button"
-              disabled={busy}
-              onClick={() => runAction('correction')}
-            >
-              {busy ? 'Sending…' : 'Send correction request'}
-            </button>
-            <button
-              className="rvp-ghost"
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setShowReason(false)
-                setReasonError(null)
-              }}
-            >
-              Cancel
-            </button>
           </div>
+
+          <div className="rvp-actions-btns">
+            {canReview && (
+              <button
+                className="rvp-action rvp-action--primary"
+                type="button"
+                disabled={busy}
+                onClick={() => runAction('review')}
+              >
+                <Clock size={16} />
+                {busy ? 'Processing…' : 'Start Review'}
+              </button>
+            )}
+            {canCorrect && !showReason && (
+              <button
+                className="rvp-action rvp-action--warn"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setShowReason(true)
+                  setReasonError(null)
+                }}
+              >
+                <AlertTriangle size={16} />
+                Request Correction
+              </button>
+            )}
+          </div>
+
+          {canCorrect && showReason && (
+            <div className="rvp-reason-box">
+              <label className="rvp-reason-label" htmlFor="rvp-reason">
+                Reason for correction <span className="rvp-req">Required</span>
+              </label>
+              <textarea
+                className="rvp-reason-input"
+                id="rvp-reason"
+                rows={3}
+                value={reason}
+                disabled={busy}
+                placeholder="Explain clearly what items or disclosures must be amended by the submitter..."
+                onChange={(e) => {
+                  setReason(e.target.value)
+                  if (reasonError) setReasonError(null)
+                }}
+              />
+              {reasonError && (
+                <p className="rvp-reason-err" role="alert">
+                  <AlertCircle size={14} />
+                  {reasonError}
+                </p>
+              )}
+              <div className="rvp-reason-actions">
+                <button
+                  className="rvp-action rvp-action--warn"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => runAction('correction')}
+                >
+                  <Send size={15} />
+                  {busy ? 'Sending…' : 'Send Correction Request'}
+                </button>
+                <button
+                  className="rvp-ghost"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setShowReason(false)
+                    setReasonError(null)
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Main Content Body */}
       <ReviewerBody framework={framework} values={values} evidence={evidence} />
 
+      {/* Timeline Section */}
       <section className="rvp-timeline">
-        <h3 className="rvp-timeline-title">Workflow history</h3>
+        <div className="rvp-timeline-head">
+          <History size={18} />
+          <h3 className="rvp-timeline-title">Workflow Audit History</h3>
+        </div>
         {workflow.length === 0 ? (
-          <p className="rvp-empty">No transitions recorded yet.</p>
+          <p className="rvp-empty">No workflow transitions recorded yet.</p>
         ) : (
           <ol className="rvp-timeline-list">
             {workflow.map((w) => (
               <li className="rvp-timeline-item" key={w.id}>
-                <span className="rvp-timeline-move">
-                  {w.from_status.replace(/_/g, ' ')} → {w.to_status.replace(/_/g, ' ')}
-                </span>
-                <span className="rvp-timeline-when">{formatDate(w.created_at)}</span>
-                {w.comments && (
-                  <span className="rvp-timeline-note">“{w.comments}”</span>
-                )}
+                <div className="rvp-timeline-marker" />
+                <div className="rvp-timeline-content">
+                  <div className="rvp-timeline-row">
+                    <span className="rvp-timeline-move">
+                      {w.from_status.replace(/_/g, ' ')} → {w.to_status.replace(/_/g, ' ')}
+                    </span>
+                    <span className="rvp-timeline-when">
+                      <Clock size={12} /> {formatDate(w.created_at)}
+                    </span>
+                  </div>
+                  {w.comments && (
+                    <div className="rvp-timeline-note">“{w.comments}”</div>
+                  )}
+                </div>
               </li>
             ))}
           </ol>
@@ -452,21 +513,27 @@ function IndicatorBlock({
             </p>
 
             {files.length > 0 && (
-              <ul className="rvp-ev">
-                {files.map((f) => (
-                  <li className="rvp-ev-item" key={f.id}>
-                    <span className="rvp-ev-name">{f.file_name}</span>
-                    <span className="rvp-ev-meta">
-                      {formatBytes(f.file_size_bytes)}
-                      {f.content_type ? ` · ${f.content_type}` : ''}
-                      {f.created_at ? ` · ${formatDate(f.created_at)}` : ''}
-                    </span>
-                    {f.description && (
-                      <span className="rvp-ev-desc">{f.description}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className="rvp-ev-wrap">
+                <span className="rvp-ev-title">Attached Evidence ({files.length}):</span>
+                <ul className="rvp-ev">
+                  {files.map((f) => (
+                    <li className="rvp-ev-item" key={f.id}>
+                      <span className="rvp-ev-name">
+                        <Paperclip size={13} className="rvp-ev-icon" />
+                        {f.file_name}
+                      </span>
+                      <span className="rvp-ev-meta">
+                        {formatBytes(f.file_size_bytes)}
+                        {f.content_type ? ` · ${f.content_type}` : ''}
+                        {f.created_at ? ` · ${formatDate(f.created_at)}` : ''}
+                      </span>
+                      {f.description && (
+                        <span className="rvp-ev-desc">{f.description}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )

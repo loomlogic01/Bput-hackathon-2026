@@ -12,6 +12,19 @@ import type {
   SubmissionWorkflowResponse,
 } from '../api/client'
 import {
+  AlertCircle,
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileText,
+  History,
+  Lock,
+  Paperclip,
+  ShieldCheck,
+} from 'lucide-react'
+import {
   ApiError,
   approveSubmission,
   getFramework,
@@ -73,7 +86,7 @@ function answerText(q: BrsrQuestion, v: SubmissionValue | undefined): string {
     return v.value_numeric === null ? '' : String(v.value_numeric)
   }
   if (q.response_type === 'TABLE') {
-    if (v.value_json) return JSON.stringify(v.value_json)
+    if (v.value_json) return JSON.stringify(v.value_json, null, 2)
     return v.value_text ?? ''
   }
   return v.value_text ?? ''
@@ -88,7 +101,6 @@ function groupEvidence(
   for (const v of values) questionByValue.set(v.id, v.question_id)
   const out: Record<string, Evidence[]> = { '': [] }
   for (const e of evidence) {
-    // A file with no submission_value_id belongs to the submission as a whole.
     if (!e.submission_value_id) {
       out[''].push(e)
       continue
@@ -113,6 +125,7 @@ function actionErrorMessage(err: unknown, verb: string): string {
   }
   return `Unable to ${verb}.`
 }
+
 export default function ApproverSubmissionPage({
   submissionId,
   onClose,
@@ -128,10 +141,7 @@ export default function ApproverSubmissionPage({
   const [busy, setBusy] = useState(false)
 
   /**
-   * Load everything the approver needs. Every call here is read-only - an
-   * APPROVER holds submission:read and nothing else, so this view must never
-   * try to save an answer, upload evidence, or move the submission forward
-   * except through approve/lock below.
+   * Load everything the approver needs. Every call here is read-only.
    */
   const load = useCallback(async () => {
     if (!token) return
@@ -192,14 +202,12 @@ export default function ApproverSubmissionPage({
       successText: string,
     ) => {
       if (!token) return
-      // Approval and locking are irreversible, so always confirm first.
       if (!window.confirm(confirmText)) return
 
       setBusy(true)
       setActionError(null)
       setNotice(null)
       try {
-        // Comments are optional; an empty box is sent by the client as null.
         const trimmed = comments.trim()
         const comment = trimmed === '' ? undefined : trimmed
         if (verb === 'approve') {
@@ -209,7 +217,6 @@ export default function ApproverSubmissionPage({
         }
         setComments('')
         setNotice(successText)
-        // Re-read so status, answers and the audit trail all reflect the server.
         await load()
       } catch (err) {
         setActionError(actionErrorMessage(err, verb))
@@ -221,17 +228,25 @@ export default function ApproverSubmissionPage({
   )
 
   if (isLoading) {
-    return <div className="avp">Loading submission…</div>
+    return (
+      <div className="avp">
+        <div className="avp-loading">
+          <div className="avp-spinner" />
+          <p>Loading submission for executive review…</p>
+        </div>
+      </div>
+    )
   }
 
   if (error !== null || data === null) {
     return (
       <div className="avp">
         <div className="avp-alert" role="alert">
-          {error ?? 'Unable to load this submission.'}
+          <AlertCircle size={18} />
+          <span>{error ?? 'Unable to load this submission.'}</span>
         </div>
         <button className="avp-ghost" type="button" onClick={onClose}>
-          Back to dashboard
+          <ArrowLeft size={16} /> Back to dashboard
         </button>
       </div>
     )
@@ -242,153 +257,190 @@ export default function ApproverSubmissionPage({
 
   const projectName =
     projects.find((p) => p.id === submission.project_id)?.name ?? '—'
-  // The server resolves the period label from this submission, so an APPROVER
-  // sees it without access to /projects/reporting-periods. The list lookup is
-  // only a fallback for older payloads.
   const periodLabel =
     submission.reporting_period_label ??
     periods.find((p) => p.id === submission.reporting_period_id)?.fiscal_year ??
     '—'
   const looseFiles = evidence[''] ?? []
-  const statusModifier = `avp-status--${submission.status.toLowerCase()}`
 
   return (
     <div className="avp">
+      {/* Header */}
       <header className="avp-head">
         <div>
-          <h2 className="avp-title">Approver view</h2>
+          <button className="avp-back-btn" type="button" onClick={onClose}>
+            <ArrowLeft size={16} /> Back to Dashboard
+          </button>
+          <div className="avp-title-wrap">
+            <h2 className="avp-title">{framework.name}</h2>
+            <span className="avp-version-badge">v{framework.version}</span>
+            <span className="avp-mode-pill">
+              <ShieldCheck size={14} /> Approver Mode
+            </span>
+          </div>
           <p className="avp-sub">
-            Read-only. Answers and evidence cannot be changed from here.
+            Executive approval portal. Review all responses, audit trails, and certify or lock the filing.
           </p>
         </div>
-        <button className="avp-ghost" type="button" onClick={onClose}>
-          Back to dashboard
-        </button>
       </header>
 
+      {/* Notifications */}
       {actionError !== null && (
         <div className="avp-alert" role="alert">
-          {actionError}
+          <AlertCircle size={18} />
+          <span>{actionError}</span>
         </div>
       )}
       {notice !== null && (
         <div className="avp-ok" role="status">
-          {notice}
+          <CheckCircle2 size={18} />
+          <span>{notice}</span>
         </div>
       )}
 
-      <section className="avp-summary">
-        <span className={`avp-status ${statusModifier}`}>
-          {submission.status.replace(/_/g, ' ')}
-        </span>
-        <dl className="avp-facts">
-          <div>
-            <dt>Project</dt>
-            <dd>{projectName}</dd>
+      {/* Summary Card */}
+      <section className="avp-summary-card">
+        <div className="avp-summary-main">
+          <div className="avp-summary-item">
+            <span className="avp-item-label">
+              <Building2 size={13} /> Project
+            </span>
+            <span className="avp-item-val">{projectName}</span>
           </div>
-          <div>
-            <dt>Reporting period</dt>
-            <dd>{periodLabel}</dd>
+          <div className="avp-summary-item">
+            <span className="avp-item-label">
+              <Calendar size={13} /> Reporting Period
+            </span>
+            <span className="avp-item-val">{periodLabel}</span>
           </div>
-          <div>
-            <dt>Framework</dt>
-            <dd>{framework.name}</dd>
+          <div className="avp-summary-item">
+            <span className="avp-item-label">
+              <FileText size={13} /> Framework
+            </span>
+            <span className="avp-item-val">{framework.name}</span>
           </div>
-          <div>
-            <dt>Last updated</dt>
-            <dd>{formatDate(submission.updated_at ?? submission.created_at)}</dd>
+          <div className="avp-summary-item">
+            <span className="avp-item-label">
+              <Clock size={13} /> Last Updated
+            </span>
+            <span className="avp-item-val">
+              {formatDate(submission.updated_at ?? submission.created_at)}
+            </span>
           </div>
-        </dl>
+        </div>
+        <div className="avp-summary-status">
+          <span className="avp-item-label">Status</span>
+          <span className={`avp-status avp-status--${submission.status.toLowerCase()}`}>
+            <span className="avp-status-dot" />
+            {submission.status.replace(/_/g, ' ')}
+          </span>
+        </div>
       </section>
-{/* ── Approval actions ── */}
-      <section className="avp-actions" aria-label="Approval actions">
-        <h3 className="avp-actions-title">Decision</h3>
+
+      {/* Approval / Lock Actions */}
+      <section className="avp-actions-card" aria-label="Approval actions">
+        <div className="avp-actions-header">
+          <h3 className="avp-actions-title">Executive Decision</h3>
+          <p className="avp-actions-desc">
+            {canApprove && 'This submission is ready for executive approval and sign-off.'}
+            {canLock && 'This submission has been approved and may now be locked permanently against further edits.'}
+            {!canApprove && !canLock && (
+              submission.status === 'LOCKED'
+                ? 'This submission has been locked. The filing is finalized and read-only.'
+                : 'No approval actions are available for this submission at its current stage.'
+            )}
+          </p>
+        </div>
 
         {canApprove && (
-          <>
+          <div className="avp-decision-body">
             <label className="avp-label" htmlFor="avp-comments">
-              Comments (optional)
+              Approval Note / Remarks (optional)
             </label>
             <textarea
               id="avp-comments"
               className="avp-textarea"
               rows={3}
               value={comments}
-              placeholder="Add a note for the audit trail (optional)…"
+              placeholder="Add an optional comment for the audit trail before approving…"
               onChange={(e) => setComments(e.target.value)}
             />
             <button
-              className="avp-primary"
+              className="avp-action-btn avp-action-btn--approve"
               type="button"
               disabled={busy}
               onClick={() =>
                 void runAction(
                   'approve',
-                  'Approve this submission? This is recorded in the audit trail.',
-                  'Submission approved.',
+                  'Approve this submission? This will be recorded permanently in the audit trail.',
+                  'Submission successfully approved.',
                 )
               }
             >
-              {busy ? 'Working…' : 'Approve'}
+              <CheckCircle2 size={16} />
+              {busy ? 'Processing…' : 'Approve Submission'}
             </button>
-          </>
+          </div>
         )}
 
         {canLock && (
-          <>
+          <div className="avp-decision-body">
             <label className="avp-label" htmlFor="avp-lock-comments">
-              Comments (optional)
+              Locking Remarks (optional)
             </label>
             <textarea
               id="avp-lock-comments"
               className="avp-textarea"
               rows={3}
               value={comments}
-              placeholder="Add a note for the audit trail (optional)…"
+              placeholder="Add an optional comment for the audit trail before locking…"
               onChange={(e) => setComments(e.target.value)}
             />
             <button
-              className="avp-lock"
+              className="avp-action-btn avp-action-btn--lock"
               type="button"
               disabled={busy}
               onClick={() =>
                 void runAction(
                   'lock',
                   'Lock this submission? Locking is final and cannot be undone.',
-                  'Submission locked.',
+                  'Submission successfully locked.',
                 )
               }
             >
-              {busy ? 'Working…' : 'Lock'}
+              <Lock size={16} />
+              {busy ? 'Processing…' : 'Lock Submission (Final)'}
             </button>
-          </>
-        )}
-
-        {!canApprove && !canLock && (
-          <p className="avp-empty">
-            {submission.status === 'LOCKED'
-              ? 'This submission is locked. No further actions are available.'
-              : 'No approval action is available at this stage.'}
-          </p>
+          </div>
         )}
       </section>
-{/* ── Workflow history, oldest first ── */}
-      <section className="avp-workflow">
-        <h4 className="avp-section-title">Workflow history</h4>
+      {/* ── Workflow history, oldest first ── */}
+      <section className="avp-timeline">
+        <div className="avp-timeline-head">
+          <History size={18} />
+          <h3 className="avp-timeline-title">Workflow Audit History</h3>
+        </div>
         {workflow.length === 0 ? (
-          <p className="avp-empty">No transitions recorded.</p>
+          <p className="avp-empty">No transitions recorded yet.</p>
         ) : (
-          <ol className="avp-wf">
+          <ol className="avp-timeline-list">
             {workflow.map((row) => (
-              <li className="avp-wf-row" key={row.id}>
-                <span className="avp-wf-transition">
-                  {row.from_status.replace(/_/g, ' ')} →{' '}
-                  {row.to_status.replace(/_/g, ' ')}
-                </span>
-                <span className="avp-wf-meta">
-                  {formatDate(row.created_at)}
-                  {row.comments ? ` · ${row.comments}` : ''}
-                </span>
+              <li className="avp-timeline-item" key={row.id}>
+                <div className="avp-timeline-marker" />
+                <div className="avp-timeline-content">
+                  <div className="avp-timeline-row">
+                    <span className="avp-timeline-move">
+                      {row.from_status.replace(/_/g, ' ')} →{' '}
+                      {row.to_status.replace(/_/g, ' ')}
+                    </span>
+                    <span className="avp-timeline-when">
+                      <Clock size={12} /> {formatDate(row.created_at)}
+                    </span>
+                  </div>
+                  {row.comments && (
+                    <div className="avp-timeline-note">“{row.comments}”</div>
+                  )}
+                </div>
               </li>
             ))}
           </ol>
@@ -397,12 +449,18 @@ export default function ApproverSubmissionPage({
 
       {/* ── Evidence attached at submission level ── */}
       {looseFiles.length > 0 && (
-        <section className="avp-workflow">
-          <h4 className="avp-section-title">Supporting documents</h4>
+        <section className="avp-loose-docs">
+          <div className="avp-loose-head">
+            <Paperclip size={16} />
+            <h4 className="avp-loose-title">Supporting Documents (Submission Level)</h4>
+          </div>
           <ul className="avp-ev">
             {looseFiles.map((f) => (
               <li className="avp-ev-item" key={f.id}>
-                <span className="avp-ev-name">{f.file_name}</span>
+                <span className="avp-ev-name">
+                  <Paperclip size={13} className="avp-ev-icon" />
+                  {f.file_name}
+                </span>
                 <span className="avp-ev-meta">
                   {formatBytes(f.file_size_bytes)}
                   {f.content_type ? ` · ${f.content_type}` : ''}
@@ -501,21 +559,27 @@ function IndicatorBlock({
             </p>
 
             {files.length > 0 && (
-              <ul className="avp-ev">
-                {files.map((f) => (
-                  <li className="avp-ev-item" key={f.id}>
-                    <span className="avp-ev-name">{f.file_name}</span>
-                    <span className="avp-ev-meta">
-                      {formatBytes(f.file_size_bytes)}
-                      {f.content_type ? ` · ${f.content_type}` : ''}
-                      {f.created_at ? ` · ${formatDate(f.created_at)}` : ''}
-                    </span>
-                    {f.description && (
-                      <span className="avp-ev-desc">{f.description}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className="avp-ev-wrap">
+                <span className="avp-ev-title">Attached Evidence ({files.length}):</span>
+                <ul className="avp-ev">
+                  {files.map((f) => (
+                    <li className="avp-ev-item" key={f.id}>
+                      <span className="avp-ev-name">
+                        <Paperclip size={13} className="avp-ev-icon" />
+                        {f.file_name}
+                      </span>
+                      <span className="avp-ev-meta">
+                        {formatBytes(f.file_size_bytes)}
+                        {f.content_type ? ` · ${f.content_type}` : ''}
+                        {f.created_at ? ` · ${formatDate(f.created_at)}` : ''}
+                      </span>
+                      {f.description && (
+                        <span className="avp-ev-desc">{f.description}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )

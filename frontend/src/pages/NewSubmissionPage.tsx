@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import {
+  Building2,
+  Calendar,
+  BookOpen,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  X,
+  Sparkles,
+  ClipboardCheck,
+} from 'lucide-react'
 
 import type {
   BrsrFramework,
@@ -139,38 +151,48 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
     )
     return (
       <div className="newsub">
-        <div className="newsub-card">
+        <div className="newsub-card newsub-card--success">
           <header className="newsub-success">
-            <span className="newsub-success-mark">OK</span>
+            <div className="newsub-success-mark">
+              <CheckCircle2 size={32} />
+            </div>
             <div>
-              <h2 className="newsub-success-title">Submission created</h2>
+              <span className="newsub-step-badge">Filing Initialised</span>
+              <h2 className="newsub-success-title">Submission Successfully Created</h2>
               <p className="newsub-success-sub">
-                A new submission is ready for data entry.
+                Your disclosure record is now catalogued in DRAFT status and ready for metric entry.
               </p>
             </div>
           </header>
 
           <dl className="newsub-summary">
             <div className="newsub-summary-item">
-              <dt>Status</dt>
+              <dt>Current Status</dt>
               <dd>
-                <span className="newsub-status">{created.status}</span>
+                <span className="dash-status-pill dash-status--draft">
+                  <span className="dash-status-dot" />
+                  <span>{created.status}</span>
+                </span>
               </dd>
             </div>
             <div className="newsub-summary-item">
-              <dt>Submission ID</dt>
+              <dt>Submission UUID</dt>
               <dd className="newsub-mono">{created.id}</dd>
             </div>
             <div className="newsub-summary-item">
-              <dt>Project</dt>
-              <dd>{project?.name ?? created.project_id}</dd>
+              <dt>Reporting Site</dt>
+              <dd className="font-semibold">{project?.name ?? created.project_id}</dd>
             </div>
             <div className="newsub-summary-item">
-              <dt>Reporting period</dt>
-              <dd>{period?.fiscal_year ?? created.reporting_period_id}</dd>
+              <dt>Reporting Period</dt>
+              <dd>
+                <span className="dash-period-badge">
+                  {period?.fiscal_year ?? created.reporting_period_id}
+                </span>
+              </dd>
             </div>
             <div className="newsub-summary-item">
-              <dt>Framework</dt>
+              <dt>Framework Standard</dt>
               <dd>
                 {framework
                   ? `${framework.name} v${framework.version}`
@@ -179,19 +201,25 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
             </div>
             {created.comments && (
               <div className="newsub-summary-item">
-                <dt>Notes</dt>
+                <dt>Internal Notes</dt>
                 <dd>{created.comments}</dd>
               </div>
             )}
           </dl>
 
-          <p className="newsub-hint">
-            The BRSR question form is the next milestone. This submission is
-            currently empty and in DRAFT.
-          </p>
-          <button className="newsub-primary" type="button" onClick={onCancel}>
-            Back to dashboard
-          </button>
+          <div className="newsub-hint-box">
+            <Sparkles size={16} className="newsub-hint-icon" />
+            <p className="newsub-hint">
+              You can now locate this submission in your dashboard table and click <strong>Open form</strong> to enter principle-by-principle quantitative and qualitative responses.
+            </p>
+          </div>
+
+          <div className="newsub-actions-row">
+            <button className="newsub-primary" type="button" onClick={onCancel}>
+              <span>Return to Dashboard</span>
+              <ArrowRight size={15} />
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -202,35 +230,43 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
       <div className="newsub-card">
         <header className="newsub-head">
           <div>
-            <h2 className="newsub-title">New Submission</h2>
+            <div className="newsub-step-badge">
+              <ClipboardCheck size={13} />
+              <span>Initiate Disclosure Cycle</span>
+            </div>
+            <h2 className="newsub-title">Create New BRSR Submission</h2>
             <p className="newsub-sub">
-              Choose the project, reporting period and BRSR framework.
+              Assign a facility project, select compliance timeframe, and bind a SEBI reporting framework standard.
             </p>
           </div>
           <button className="newsub-ghost" type="button" onClick={onCancel}>
-            Cancel
+            <X size={15} />
+            <span>Cancel</span>
           </button>
         </header>
 
         {loadError && (
           <div className="newsub-alert" role="alert">
-            {loadError}
+            <AlertTriangle size={16} />
+            <span>{loadError}</span>
           </div>
         )}
 
         <form className="newsub-form" onSubmit={handleSubmit} noValidate>
           {submitError && (
             <div className="newsub-alert" role="alert">
-              {submitError}
+              <AlertTriangle size={16} />
+              <span>{submitError}</span>
             </div>
           )}
 
           <Select
             id="project"
-            label="Project"
+            label="Operating Project / Facility"
+            icon={<Building2 size={14} />}
             isLoading={isLoading}
             isEmpty={!isLoading && options.projects.length === 0}
-            emptyMessage="No projects are available in your scope."
+            emptyMessage="No facilities or projects found within authorized scope."
             value={projectId}
             onChange={setProjectId}
             disabled={isSubmitting}
@@ -242,10 +278,11 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
 
           <Select
             id="period"
-            label="Reporting period"
+            label="Reporting Compliance Period"
+            icon={<Calendar size={14} />}
             isLoading={isLoading}
             isEmpty={!isLoading && options.periods.length === 0}
-            emptyMessage="No reporting periods are available."
+            emptyMessage="No reporting periods currently active."
             value={periodId}
             onChange={setPeriodId}
             disabled={isSubmitting}
@@ -257,10 +294,11 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
 
           <Select
             id="framework"
-            label="BRSR framework"
+            label="BRSR Framework Standard"
+            icon={<BookOpen size={14} />}
             isLoading={isLoading}
             isEmpty={!isLoading && options.frameworks.length === 0}
-            emptyMessage="No BRSR frameworks are available."
+            emptyMessage="No BRSR framework standards registered."
             value={frameworkId}
             onChange={setFrameworkId}
             disabled={isSubmitting}
@@ -271,23 +309,47 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
           />
 
           <div className="newsub-field">
-            <label className="newsub-label" htmlFor="notes">
-              Notes <span className="newsub-optional">optional</span>
-            </label>
+            <div className="newsub-label-row">
+              <label className="newsub-label" htmlFor="notes">
+                <FileText size={14} />
+                <span>Internal Audit Notes</span>
+              </label>
+              <span className="newsub-optional">optional</span>
+            </div>
             <textarea
               className="newsub-textarea"
               id="notes"
               rows={3}
-              placeholder="Internal notes about this submission"
+              placeholder="Provide contextual comments, site scope references, or prep instructions…"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={isSubmitting}
             />
           </div>
 
-          <button className="newsub-primary" type="submit" disabled={!canSubmit}>
-            {isSubmitting ? 'Creating…' : 'Create submission'}
-          </button>
+          <div className="newsub-footer-actions">
+            <button
+              className="newsub-secondary"
+              type="button"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button className="newsub-primary" type="submit" disabled={!canSubmit}>
+              {isSubmitting ? (
+                <>
+                  <span className="login-spinner" style={{ width: '15px', height: '15px' }} />
+                  <span>Creating Filing…</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Submission Filing</span>
+                  <ArrowRight size={15} />
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -297,6 +359,7 @@ export default function NewSubmissionPage({ onCreated, onCancel }: Props) {
 function Select({
   id,
   label,
+  icon,
   value,
   onChange,
   options,
@@ -307,6 +370,7 @@ function Select({
 }: {
   id: string
   label: string
+  icon?: React.ReactNode
   value: string
   onChange: (value: string) => void
   options: { value: string; label: string }[]
@@ -318,28 +382,32 @@ function Select({
   return (
     <div className="newsub-field">
       <label className="newsub-label" htmlFor={id}>
-        {label}
+        {icon}
+        <span>{label}</span>
       </label>
-      <select
-        className="newsub-select"
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled || isLoading || isEmpty}
-      >
-        <option value="">
-          {isLoading
-            ? 'Loading…'
-            : isEmpty
-              ? emptyMessage
-              : 'Please select…'}
-        </option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
+      <div className="newsub-select-wrap">
+        <select
+          className="newsub-select"
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled || isLoading || isEmpty}
+        >
+          <option value="">
+            {isLoading
+              ? 'Loading available options…'
+              : isEmpty
+                ? emptyMessage
+                : '— Please choose an option —'}
           </option>
-        ))}
-      </select>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   )
 }
+

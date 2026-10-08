@@ -1,4 +1,20 @@
 import { useEffect, useState } from 'react'
+import {
+  ArrowLeft,
+  RefreshCw,
+  History,
+  ShieldCheck,
+  Filter,
+  Clock,
+  Layers,
+  Leaf,
+  LogOut,
+  AlertTriangle,
+  Database,
+  KeyRound,
+  FileCheck2,
+} from 'lucide-react'
+
 import type { AuditLog } from '../api/client'
 import { ApiError, listAuditLogs } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -9,8 +25,21 @@ interface Props {
   onBack: () => void
 }
 
+function actionBadge(action: string) {
+  switch (action) {
+    case 'USER_LOGIN':
+      return { className: 'dash-status--progress', icon: <KeyRound size={12} /> }
+    case 'VALUE_UPDATED':
+      return { className: 'dash-status--done', icon: <FileCheck2 size={12} /> }
+    case 'EVIDENCE_UPLOADED':
+      return { className: 'dash-status--review', icon: <Database size={12} /> }
+    default:
+      return { className: 'dash-status--draft', icon: <ShieldCheck size={12} /> }
+  }
+}
+
 export default function AuditLogPage({ onBack }: Props) {
-  const { token, logout } = useAuth()
+  const { user, token, logout } = useAuth()
 
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -48,41 +77,84 @@ export default function AuditLogPage({ onBack }: Props) {
     fetchLogs()
   }, [token, actionFilter, entityTypeFilter])
 
+  const userInitial = user?.full_name ? user.full_name[0].toUpperCase() : 'U'
+
   return (
     <div className="dash">
       <header className="dash-topbar">
         <div className="dash-brand">
-          <span className="dash-brand-mark">SEBI</span>
+          <div className="dash-brand-mark">
+            <Leaf size={18} />
+          </div>
           <div className="dash-brand-text">
-            <p className="dash-brand-eyebrow">
-              Business Responsibility &amp; Sustainability
-            </p>
-            <p className="dash-brand-name">ESG Reporting Portal</p>
+            <span className="dash-brand-eyebrow">SEBI BRSR CORE</span>
+            <p className="dash-brand-name">ESG &amp; Sustainability Portal</p>
           </div>
         </div>
-        <div className="dash-topbar-actions">
-          <button className="dash-primary" type="button" onClick={onBack}>
-            ← Dashboard
+
+        <nav className="dash-nav-links" aria-label="Main Navigation">
+          <button className="dash-nav-link" type="button" onClick={onBack}>
+            <Layers size={15} />
+            <span>Dashboard</span>
           </button>
-          <button className="dash-signout" type="button" onClick={logout}>
-            Sign out
+          <button className="dash-nav-link dash-nav-link--active" type="button">
+            <History size={15} />
+            <span>Audit Log</span>
+          </button>
+        </nav>
+
+        <div className="dash-topbar-actions">
+          <button className="dash-btn-back" type="button" onClick={onBack}>
+            <ArrowLeft size={15} />
+            <span>Back to Dashboard</span>
+          </button>
+
+          <div className="dash-user-pill">
+            <div className="dash-user-avatar">
+              {userInitial}
+            </div>
+            <div className="dash-user-info">
+              <span className="dash-user-name">{user?.full_name ?? 'User'}</span>
+            </div>
+          </div>
+
+          <button className="dash-signout-btn" type="button" onClick={logout}>
+            <LogOut size={15} />
+            <span className="dash-signout-text">Sign out</span>
           </button>
         </div>
       </header>
 
-      <div className="con-body">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 className="con-page-title" style={{ margin: 0 }}>System Audit Log</h2>
-          <button className="dash-secondary" type="button" onClick={fetchLogs}>
-            🔄 Refresh
-          </button>
-        </div>
+      <main className="con-body">
+        <section className="con-header-bar">
+          <div>
+            <div className="con-badge-tag">
+              <ShieldCheck size={13} />
+              <span>Immutable Ledger · Regulatory Audit Trail</span>
+            </div>
+            <h2 className="con-page-title">Platform Audit Trail</h2>
+            <p className="con-page-subtitle">
+              Cryptographically timestamped record of user authentications, disclosure changes, and file uploads.
+            </p>
+          </div>
 
-        {/* Filters */}
-        <div className="con-selectors" style={{ marginBottom: '1.5rem' }}>
+          <button
+            className="dash-primary-btn"
+            type="button"
+            onClick={fetchLogs}
+            disabled={isLoading}
+          >
+            <RefreshCw size={14} className={isLoading ? 'login-spinner' : ''} />
+            <span>Refresh Logs</span>
+          </button>
+        </section>
+
+        {/* Filters Toolbar */}
+        <section className="con-selectors" aria-label="Audit Log Filters">
           <div className="con-field">
             <label htmlFor="audit-action-select" className="con-label">
-              Action Filter
+              <Filter size={13} />
+              <span>Action Event Filter</span>
             </label>
             <select
               id="audit-action-select"
@@ -99,7 +171,8 @@ export default function AuditLogPage({ onBack }: Props) {
 
           <div className="con-field">
             <label htmlFor="audit-entity-select" className="con-label">
-              Entity Type Filter
+              <Database size={13} />
+              <span>Target Entity Type</span>
             </label>
             <select
               id="audit-entity-select"
@@ -113,67 +186,101 @@ export default function AuditLogPage({ onBack }: Props) {
               <option value="Evidence">Evidence</option>
             </select>
           </div>
-        </div>
+        </section>
 
         {isLoading ? (
-          <p className="dash-muted">Loading audit history…</p>
+          <div className="con-loading-card">
+            <div className="dash-panel-spinner" style={{ width: '2rem', height: '2rem' }} />
+            <p>Fetching immutable audit history from database…</p>
+          </div>
         ) : error ? (
           <div className="dash-alert" role="alert">
-            <span>{error}</span>
+            <div className="dash-alert-content">
+              <AlertTriangle size={18} />
+              <span>{error}</span>
+            </div>
             <button className="dash-retry" type="button" onClick={fetchLogs}>
               Retry
             </button>
           </div>
         ) : logs.length === 0 ? (
-          <p className="dash-empty">No audit log records found.</p>
+          <div className="con-hint-card">
+            <div className="con-hint-icon">
+              <ShieldCheck size={32} />
+            </div>
+            <h3 className="con-hint-title">No Audit Records Found</h3>
+            <p className="con-hint-desc">
+              No events matched the currently selected action and entity filters. Try clearing the filter options.
+            </p>
+          </div>
         ) : (
-          <section className="dash-panel">
+          <section className="dash-panel" aria-label="System Activity History">
             <header className="dash-panel-head">
-              <h3 className="dash-panel-title">Activity History</h3>
-              <p className="dash-panel-sub">
-                Immutable record of platform events ({logs.length} entries shown)
-              </p>
+              <div className="dash-panel-title-group">
+                <div className="dash-panel-icon">
+                  <History size={18} />
+                </div>
+                <div>
+                  <h3 className="dash-panel-title">System Event Ledger</h3>
+                  <p className="dash-panel-sub">
+                    Displaying latest {logs.length} events logged in this reporting space
+                  </p>
+                </div>
+              </div>
             </header>
+
             <div className="dash-table-wrap">
               <table className="dash-table">
                 <thead>
                   <tr>
                     <th scope="col">Timestamp</th>
-                    <th scope="col">User ID</th>
-                    <th scope="col">Action</th>
-                    <th scope="col">Entity</th>
-                    <th scope="col">Description</th>
+                    <th scope="col">Actor / User ID</th>
+                    <th scope="col">Action Type</th>
+                    <th scope="col">Entity Reference</th>
+                    <th scope="col">Event Description</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
-                    <tr key={log.id}>
-                      <td>
-                        {new Date(log.created_at).toLocaleString()}
-                      </td>
-                      <td>
-                        <span className="dash-chip dash-chip--plain">
-                          {log.user_id ? log.user_id.slice(0, 8) + '…' : 'System'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="dash-chip dash-chip--primary">
-                          {log.action}
-                        </span>
-                      </td>
-                      <td>
-                        {log.entity_type} {log.entity_id ? `(${log.entity_id.slice(0, 8)}…)` : ''}
-                      </td>
-                      <td>{log.description || '—'}</td>
-                    </tr>
-                  ))}
+                  {logs.map((log) => {
+                    const cfg = actionBadge(log.action)
+                    return (
+                      <tr key={log.id} className="dash-table-row">
+                        <td>
+                          <span className="dash-date-text">
+                            <Clock size={13} />
+                            {new Date(log.created_at).toLocaleString()}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="dash-badge-code">
+                            {log.user_id ? log.user_id.slice(0, 8) + '…' : 'System'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`dash-status-pill ${cfg.className}`}>
+                            {cfg.icon}
+                            <span>{log.action}</span>
+                          </span>
+                        </td>
+                        <td>
+                          <span className="dash-period-badge">
+                            {log.entity_type} {log.entity_id ? `(${log.entity_id.slice(0, 8)}…)` : ''}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="con-metric-text">{log.description || '—'}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           </section>
         )}
-      </div>
+      </main>
     </div>
   )
 }
+
 
